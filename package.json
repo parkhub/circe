@@ -1,0 +1,58 @@
+{
+  "name": "@parkhub/circe",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "babel src --out-dir dist --copy-files && cp ./package.json ./README.md dist",
+    "clean": "rm -rf dist coverage",
+    "lint": "eslint src",
+    "commit": "git-cz",
+    "docs": "esdoc",
+    "release": "yarn test && yarn run clean && yarn run lint && yarn run build",
+    "todos": "leasot --reporter markdown ./src/** > TODOS.md",
+    "start": "node index.js",
+    "start-dev": "NODE_ENV=development nodemon --exec babel-node ./src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watchAll"
+  },
+  "main": "index.js",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-eslint": "^7.2.3",
+    "babel-jest": "^20.0.3",
+    "babel-loader": "^7.1.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-plugin-transform-strict-mode": "^6.24.1",
+    "commitizen": "^2.9.6",
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb-base": "^11.2.0",
+    "eslint-loader": "^1.8.0",
+    "eslint-plugin-babel": "^4.1.1",
+    "eslint-plugin-import": "^2.5.0",
+    "eslint-plugin-jest": "^20.0.3",
+    "jest": "^20.0.4",
+    "prettier-eslint-cli": "^4.1.1"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "jest": {
+    "verbose": true,
+    "collectCoverage": true,
+    "testMatch": [
+      "**/__tests__/**/*.test.js?(x)"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "modulePathIgnorePatterns": [
+      "dist/*"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/"
+    ]
+  }
+}

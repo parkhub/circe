@@ -1,0 +1,7 @@
+syntax = 'proto3';
+
+package test.events;
+
+message CreatedTestEvent {
+  string data = 1;
+}

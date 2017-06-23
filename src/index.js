@@ -36,14 +36,14 @@ function checkCfgs(cfgs) {
 /**
  * eventStore factory function
  *
- * @function eventStore
+ * @function circe
  * @param {Object} cfgs Configuratoins for factory
  * @param {Object} cfgs.plugin Plugin definition that matches the Plugin interface
  * @param {Object} cfgs.eventCfgs Configurations for creating and publishing an Event
  * @param {Object} cfgs.connection A URL to connect to event store running in our services.
  * @returns {Object} eventStore instance
  */
-export default function eventStore(cfgs = {}) {
+export default function circe(cfgs = {}) {
   checkCfgs(cfgs);
 
   const { plugin, connection } = cfgs;

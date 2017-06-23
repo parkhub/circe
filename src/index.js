@@ -41,9 +41,9 @@ function checkCfgs(cfgs) {
  * @param {Object} cfgs.plugin Plugin definition that matches the Plugin interface
  * @param {Object} cfgs.eventCfgs Configurations for creating and publishing an Event
  * @param {Object} cfgs.connection A URL to connect to event store running in our services.
- * @returns {Promise} eventStore instance
+ * @returns {Object} eventStore instance
  */
-export default async function eventStore(cfgs = {}) {
+export default function eventStore(cfgs = {}) {
   checkCfgs(cfgs);
 
   const { plugin, connection } = cfgs;
@@ -57,5 +57,5 @@ export default async function eventStore(cfgs = {}) {
     }
   };
 
-  return Object.create(eventStoreProto);
+  return eventStoreProto;
 }

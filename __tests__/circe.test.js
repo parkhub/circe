@@ -33,24 +33,20 @@ jest.mock('../src/producer', () =>
 );
 
 describe('circe() API', () => {
-  test('Should reject if no configurations are passed', async () => {
-    await expect(circe()).rejects.toBeDefined();
+  test('Should reject if no configurations are passed', () => {
+    expect(() => circe()).toThrow();
   });
 
-  test('Should reject if connection is not passed in', async () => {
+  test('Should reject if connection is not passed in', () => {
     const expectedErrMsg = '"connection" configuration is required';
 
-    await expect(circe({ plugin: {} })).rejects.toEqual(
-      new Error(expectedErrMsg)
-    );
+    expect(() => circe({ plugin: {} })).toThrow(new Error(expectedErrMsg));
   });
 
-  test('Should reject if plugin is not passed in', async () => {
+  test('Should reject if plugin is not passed in', () => {
     const expectedErrMsg = '"plugin" configuration is required';
 
-    await expect(circe({ connection: 'conn' })).rejects.toEqual(
-      new Error(expectedErrMsg)
-    );
+    expect(() => circe({ connection: 'conn' })).toThrow(new Error(expectedErrMsg));
   });
 
   test('Should return create methods', async () => {

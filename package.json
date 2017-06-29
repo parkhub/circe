@@ -7,10 +7,13 @@
     "commitmsg": "opt --in commit-msg --exec \"validate-commit-msg\"",
     "precommit": "opt --in pre-commit --exec \"npm start validate\""
   },
-  "main": "index.js",
+  "main": "dist/index.js",
   "engines": {
     "node": ">=8.0.0"
   },
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "babel-cli": "^6.24.1",
     "babel-eslint": "^7.2.3",

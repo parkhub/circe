@@ -18,7 +18,7 @@ module.exports = {
       description: 'delete the dist directory and run babel to build the files',
       script: series(
         rimraf('dist'),
-        'babel --copy-files --out-dir dist --ignore *.test.js,__mocks__ src && cp package.json README.md CHANGELOG dist'
+        'babel --copy-files --out-dir dist --ignore *.test.js,__mocks__ src'
       )
     },
     lint: {
@@ -31,7 +31,7 @@ module.exports = {
     },
     release: {
       description: 'We automate releases with semantic-release. This should only be run on travis',
-      script: series('semantic-release pre', 'npm publish dist/', 'semantic-release post')
+      script: series('semantic-release pre', 'npm publish', 'semantic-release post')
     },
     validate: {
       description:

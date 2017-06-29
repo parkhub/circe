@@ -71,9 +71,7 @@ describe('consumer().subscribeToEvent', () => {
     const consumerClient = await consumerFactory(consumerFactoryCfgs);
 
     const expectedErr = new Error('"handler" configuration is required');
-    expect(() => consumerClient.subscribeToEvent({ event: 'test' })).toThrow(
-      expectedErr
-    );
+    expect(() => consumerClient.subscribeToEvent({ event: 'test' })).toThrow(expectedErr);
   });
 
   test('Should throw if event configuration is not set', async () => {
@@ -82,9 +80,7 @@ describe('consumer().subscribeToEvent', () => {
     const consumerClient = await consumerFactory(consumerFactoryCfgs);
 
     const expectedErr = new Error('"event" configuration is required');
-    expect(() =>
-      consumerClient.subscribeToEvent({ handler: () => ({}) })
-    ).toThrow(expectedErr);
+    expect(() => consumerClient.subscribeToEvent({ handler: () => ({}) })).toThrow(expectedErr);
   });
 
   test('Should throw if event to subscribe to is not defined in eventCfgs', async () => {
@@ -92,9 +88,7 @@ describe('consumer().subscribeToEvent', () => {
     const consumerFactoryCfgs = basePluginCfgs({ plugin });
     const consumerClient = await consumerFactory(consumerFactoryCfgs);
 
-    const expectedErr = new Error(
-      'Event "NotDefined" is not defined as a consumable event'
-    );
+    const expectedErr = new Error('Event "NotDefined" is not defined as a consumable event');
 
     expect(() =>
       consumerClient.subscribeToEvent({
@@ -117,20 +111,20 @@ describe('consumer().subscribeToEvent', () => {
     const consumerClient = await consumerFactory(consumerFactoryCfgs);
 
     const handler = () => {};
-    const consumeCfgs = {
+    const pluginCfgs = {
       test: 'test'
     };
 
     await consumerClient.subscribeToEvent({
       event: 'TestEvent',
       handler,
-      consumeCfgs
+      pluginCfgs
     });
 
     expect(testPlugin.__mockConsumer__.subscribeToEvent).toBeCalledWith({
       event: 'TestEvent',
       handler: consumerState.TestEvent,
-      consumeCfgs
+      pluginCfgs
     });
   });
 
@@ -147,14 +141,14 @@ describe('consumer().subscribeToEvent', () => {
     const consumerClient = await consumerFactory(consumerFactoryCfgs);
 
     const handler = jest.fn();
-    const consumeCfgs = {
+    const pluginCfgs = {
       test: 'test'
     };
 
     await consumerClient.subscribeToEvent({
       event: 'TestEvent',
       handler,
-      consumeCfgs
+      pluginCfgs
     });
 
     const data = {
@@ -174,9 +168,7 @@ describe('consumer().subscribeToEvent', () => {
       data
     };
 
-    expect(testPlugin.__mockConsumer__.eventMessageParser).toHaveBeenCalledWith(
-      data
-    );
+    expect(testPlugin.__mockConsumer__.eventMessageParser).toHaveBeenCalledWith(data);
     expect(handler).toHaveBeenCalledWith(expectedArgs);
   });
 });

@@ -49,13 +49,13 @@ describe('circe() API', () => {
     expect(() => circe({ connection: 'conn' })).toThrow(new Error(expectedErrMsg));
   });
 
-  test('Should return create methods', async () => {
+  test('Should return create methods', () => {
     const cfgs = {
       plugin() {},
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
 
     expect(store.createProducer).toBeDefined();
     expect(typeof store.createProducer).toBe('function');
@@ -72,7 +72,7 @@ describe('circe().createProducer', () => {
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
     expect(store.createProducer()).rejects.toBeDefined();
   });
 
@@ -82,7 +82,7 @@ describe('circe().createProducer', () => {
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
 
     const producerCfgs = {
       validators: {}
@@ -99,11 +99,11 @@ describe('circe().createProducer', () => {
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
 
     const producerCfgs = {
       validators: {},
-      producerCfgs: {
+      pluginCfgs: {
         test: 'test'
       }
     };
@@ -121,7 +121,7 @@ describe('circe().createConsumer', () => {
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
     expect(store.createConsumer()).rejects.toBeDefined();
   });
 
@@ -131,7 +131,7 @@ describe('circe().createConsumer', () => {
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
 
     const consumerCfgs = {
       validators: {}
@@ -148,10 +148,10 @@ describe('circe().createConsumer', () => {
       connection: 'test'
     };
 
-    const store = await circe(cfgs);
+    const store = circe(cfgs);
     const consumerCfgs = {
       validators: {},
-      consumerCfgs: {
+      pluginCfgs: {
         test: 'test'
       }
     };

@@ -2,9 +2,6 @@ const basePluginCfgs = (overrides) => {
   const connection = 'localhost:1234';
   const testEvent = 'TestEvent';
   const groupId = 123;
-  const topicCfgs = {
-    test: 'test'
-  };
 
   const validators = {
     [testEvent]: {
@@ -14,11 +11,7 @@ const basePluginCfgs = (overrides) => {
     }
   };
 
-  const consumerCfgs = {
-    test: 'test'
-  };
-
-  const producerCfgs = {
+  const pluginCfgs = {
     test: 'test'
   };
 
@@ -28,9 +21,7 @@ const basePluginCfgs = (overrides) => {
       validators,
       groupId,
       connection,
-      consumerCfgs,
-      producerCfgs,
-      topicCfgs
+      pluginCfgs
     },
     overrides
   );

@@ -2,36 +2,34 @@
   "name": "@parkhub/circe",
   "version": "0.2.1",
   "scripts": {
-    "build": "babel src --out-dir dist --copy-files && cp ./package.json ./README.md dist",
-    "clean": "rm -rf dist coverage",
-    "lint": "eslint src",
-    "commit": "git-cz",
-    "docs": "esdoc",
-    "release": "yarn test && yarn run clean && yarn run lint && yarn run build",
-    "todos": "leasot --reporter markdown ./src/** > TODOS.md",
-    "start": "node index.js",
-    "start-dev": "NODE_ENV=development nodemon --exec babel-node ./src/index.js",
-    "test": "jest",
-    "test:watch": "jest --watchAll"
+    "start": "nps",
+    "commitmsg": "opt --in commit-msg --exec \"validate-commit-msg\"",
+    "precommit": "opt --in pre-commit --exec \"npm start validate\""
   },
   "main": "index.js",
   "devDependencies": {
     "babel-cli": "^6.24.1",
     "babel-eslint": "^7.2.3",
     "babel-jest": "^20.0.3",
-    "babel-loader": "^7.1.0",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.24.1",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-plugin-transform-strict-mode": "^6.24.1",
     "commitizen": "^2.9.6",
+    "cz-conventional-changelog": "^2.0.0",
+    "esdoc": "^0.5.2",
     "eslint": "^3.19.0",
     "eslint-config-airbnb-base": "^11.2.0",
     "eslint-loader": "^1.8.0",
     "eslint-plugin-babel": "^4.1.1",
-    "eslint-plugin-import": "^2.5.0",
+    "eslint-plugin-import": "^2.6.1",
     "eslint-plugin-jest": "^20.0.3",
+    "husky": "^0.14.1",
     "jest": "^20.0.4",
-    "prettier-eslint-cli": "^4.1.1"
+    "nps": "^5.3.2",
+    "nps-utils": "^1.2.0",
+    "prettier-eslint-cli": "^4.1.1",
+    "rimraf": "^2.6.1",
+    "validate-commit-msg": "^2.12.2"
   },
   "config": {
     "commitizen": {

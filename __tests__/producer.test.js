@@ -65,9 +65,7 @@ describe('producer().publishEvent', () => {
     const producerClient = await producerFactory(producerFactoryCfgs);
 
     const expectedErr = new Error('"event" configuration is required');
-    expect(() => producerClient.publishEvent({ message: {} })).toThrow(
-      expectedErr
-    );
+    expect(() => producerClient.publishEvent({ message: {} })).toThrow(expectedErr);
   });
 
   test('Should throw if message configuration is not set', async () => {
@@ -77,9 +75,7 @@ describe('producer().publishEvent', () => {
     const producerClient = await producerFactory(producerFactoryCfgs);
 
     const expectedErr = new Error('"message" configuration is required');
-    expect(() => producerClient.publishEvent({ event: 'TestEvent' })).toThrow(
-      expectedErr
-    );
+    expect(() => producerClient.publishEvent({ event: 'TestEvent' })).toThrow(expectedErr);
   });
 
   test('Should throw if event being configured is not defined', async () => {
@@ -88,13 +84,11 @@ describe('producer().publishEvent', () => {
     const producerFactoryCfgs = basePluginCfgs({ plugin });
     const producerClient = await producerFactory(producerFactoryCfgs);
 
-    const expectedErr = new Error(
-      'Event "NotDefined" is not defined as a publishable event'
-    );
+    const expectedErr = new Error('Event "NotDefined" is not defined as a publishable event');
 
-    expect(() =>
-      producerClient.publishEvent({ event: 'NotDefined', message: {} })
-    ).toThrow(expectedErr);
+    expect(() => producerClient.publishEvent({ event: 'NotDefined', message: {} })).toThrow(
+      expectedErr
+    );
   });
 
   test('Should publish a valid event', async () => {
@@ -107,14 +101,14 @@ describe('producer().publishEvent', () => {
       test: 'test'
     };
 
-    const publishCfgs = {
+    const pluginCfgs = {
       test: 'test'
     };
 
     const publishEventCfgs = {
       event: 'TestEvent',
       message,
-      publishCfgs
+      pluginCfgs
     };
 
     producerClient.publishEvent(publishEventCfgs);
@@ -149,14 +143,14 @@ describe('producer().publishEvent', () => {
       test: 'test'
     };
 
-    const publishCfgs = {
+    const pluginCfgs = {
       test: 'test'
     };
 
     const publishEventCfgs = {
       event: 'TestEvent',
       message,
-      publishCfgs
+      pluginCfgs
     };
 
     expect(() => producerClient.publishEvent(publishEventCfgs)).toThrow(err);
@@ -177,14 +171,14 @@ describe('producer().publishEvent', () => {
       test: 'test'
     };
 
-    const publishCfgs = {
+    const pluginCfgs = {
       test: 'test'
     };
 
     const publishEventCfgs = {
       event: 'TestEvent',
       message,
-      publishCfgs
+      pluginCfgs
     };
 
     expect(() => producerClient.publishEvent(publishEventCfgs)).toThrow(err);

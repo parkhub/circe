@@ -1,15 +1,17 @@
 /**
- * Event store that publishes events to Parkhub's instance using plugins defined by the plugin
- * interface.
+ * Circe overrides a consumers subscribeToEvent method and a producers publishEvent method from it's
+ * plugin to provide custom validation mechanics. Each overriden method requires "validators" to
+ * use by matching the Kafka topic it's publishing/consuming to the object's key and calling a
+ * validateAndCreateMessage for it.
  *
- * @module @parkhub/canonical-event-store
+ * @module @parkhub/circe
  * @author Daniel Olivares
  */
 import producer from './producer';
 import consumer from './consumer';
 
 /**
- * @typedef {Object} EventStore
+ * @typedef {Object} CirceInstance
  * @property {Function} createProducer Producer factory to create producers from eventCfgs
  * @property {Function} createConsumer Consumer factory to create consumers from eventCfgs
 */
@@ -22,6 +24,12 @@ import consumer from './consumer';
  * TODO Improve DOCS by adding examples etc
 */
 
+/**
+ * Check Configurations
+ *
+ * @function checkCfgs
+ * @private
+ */
 function checkCfgs(cfgs) {
   const { plugin, connection } = cfgs;
 
@@ -33,15 +41,15 @@ function checkCfgs(cfgs) {
     throw new Error('"plugin" configuration is required');
   }
 }
+
 /**
- * eventStore factory function
+ *  Circe factory function
  *
  * @function circe
  * @param {Object} cfgs Configuratoins for factory
  * @param {Object} cfgs.plugin Plugin definition that matches the Plugin interface
- * @param {Object} cfgs.eventCfgs Configurations for creating and publishing an Event
- * @param {Object} cfgs.connection A URL to connect to event store running in our services.
- * @returns {Object} eventStore instance
+ * @param {Object} cfgs.connection Configurations for creating and publishing an Event
+ * @returns {CirceInstance} circe methods
  */
 export default function circe(cfgs = {}) {
   checkCfgs(cfgs);

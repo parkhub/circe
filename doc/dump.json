@@ -1,0 +1,1179 @@
+[
+  {
+    "__docId__": 0,
+    "kind": "file",
+    "name": "src/consumer.js",
+    "content": "import initiateConsumerFromPlugin from './lib/initiateConsumerFromPlugin';\n\nfunction checkCfgs(cfgs) {\n  const errMsg = configuration => `\"${configuration}\" configuration is required`;\n  const { event, handler } = cfgs;\n\n  if (!event) {\n    throw new Error(errMsg('event'));\n  }\n\n  if (!handler) {\n    throw new Error(errMsg('handler'));\n  }\n}\n\n/**\n * Consumer factory that overrides the plugins subscribeToEvent method and injects the validator\n * logic.\n *\n * @function consumer\n * @param {Object} cfgs configuration for consumer\n * @param {Object} cfgs.plugin Plugin which provides actual logic for Kafka whose method will\n * be overriden\n * @param {Object} cfgs.validators A key-value map of events being consumed whose value is an\n * object with a validateAndCreateMessage method\n * @param {Object} cfgs.pluginCfgs Configurations that are specific to the plugin\n * @returns {Promise<Object, Error>} A promise that fulfills with an instance of a producer from\n * plugin\n */\nexport default async function consumer(cfgs = {}) {\n  const initializedConsumer = await initiateConsumerFromPlugin(cfgs);\n  const { validators } = cfgs;\n\n  if (!validators) {\n    throw new Error('\"validators\" configuration is required');\n  }\n\n  // Override the subscribeToEvent with out own\n  const pluginSubscribeToEvent = initializedConsumer.subscribeToEvent;\n\n  initializedConsumer.subscribeToEvent = ({ event, handler, pluginCfgs = {} } = {}) => {\n    checkCfgs({ event, handler });\n\n    const validator = validators[event];\n\n    if (!validator) {\n      throw new Error(`Event \"${event}\" is not defined as a consumable event`);\n    }\n\n    const { validateAndCreateMessage } = validator;\n\n    // Wrap the handler for this consumer for the topic to execute the extraction outside of handler\n    const wrappedHandler = (data) => {\n      const message = initializedConsumer.eventMessageParser(data);\n      const verifiedMsg = validateAndCreateMessage({ message });\n\n      handler({ message: verifiedMsg, data });\n    };\n\n    // Call the original method from the plugin\n    pluginSubscribeToEvent({\n      event,\n      handler: wrappedHandler,\n      pluginCfgs\n    });\n  };\n\n  return initializedConsumer;\n}\n",
+    "static": true,
+    "longname": "src/consumer.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 1,
+    "kind": "function",
+    "name": "checkCfgs",
+    "memberof": "src/consumer.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/consumer.js~checkCfgs",
+    "access": null,
+    "export": false,
+    "importPath": "@parkhub/circe/src/consumer.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "cfgs",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 2,
+    "kind": "function",
+    "name": "consumer",
+    "memberof": "src/consumer.js",
+    "generator": false,
+    "async": true,
+    "static": true,
+    "longname": "src/consumer.js~consumer",
+    "access": null,
+    "export": true,
+    "importPath": "@parkhub/circe/src/consumer.js",
+    "importStyle": "consumer",
+    "description": "Consumer factory that overrides the plugins subscribeToEvent method and injects the validator\nlogic.",
+    "lineNumber": 30,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "consumer"
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Promise<Object, Error>} A promise that fulfills with an instance of a producer from\nplugin"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs",
+        "description": "configuration for consumer"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.plugin",
+        "description": "Plugin which provides actual logic for Kafka whose method will\nbe overriden"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.validators",
+        "description": "A key-value map of events being consumed whose value is an\nobject with a validateAndCreateMessage method"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.pluginCfgs",
+        "description": "Configurations that are specific to the plugin"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object, Error>"
+      ],
+      "spread": false,
+      "description": "A promise that fulfills with an instance of a producer from\nplugin"
+    }
+  },
+  {
+    "__docId__": 3,
+    "kind": "file",
+    "name": "src/index.js",
+    "content": "/**\n * Circe overrides a consumers subscribeToEvent method and a producers publishEvent method from it's\n * plugin to provide custom validation mechanics. Each overriden method requires \"validators\" to\n * use by matching the Kafka topic it's publishing/consuming to the object's key and calling a\n * validateAndCreateMessage for it.\n *\n * @module @parkhub/circe\n * @author Daniel Olivares\n */\nimport producer from './producer';\nimport consumer from './consumer';\n\n/**\n * @typedef {Object} CirceInstance\n * @property {Function} createProducer Producer factory to create producers from eventCfgs\n * @property {Function} createConsumer Consumer factory to create consumers from eventCfgs\n*/\n\n/* TODOS\n * TODO UPDATE DOCS\n * TODO Define what a producerCfG looks like\n * TODO Define Plugin interface\n * TODO Error handling for arguments can be cleaner\n * TODO Improve DOCS by adding examples etc\n*/\n\n/**\n * Check Configurations\n *\n * @function checkCfgs\n * @private\n */\nfunction checkCfgs(cfgs) {\n  const { plugin, connection } = cfgs;\n\n  if (!connection) {\n    throw new Error('\"connection\" configuration is required');\n  }\n\n  if (!plugin) {\n    throw new Error('\"plugin\" configuration is required');\n  }\n}\n\n/**\n *  Circe factory function\n *\n * @function circe\n * @param {Object} cfgs Configuratoins for factory\n * @param {Object} cfgs.plugin Plugin definition that matches the Plugin interface\n * @param {Object} cfgs.connection Configurations for creating and publishing an Event\n * @returns {CirceInstance} circe methods\n */\nexport default function circe(cfgs = {}) {\n  checkCfgs(cfgs);\n\n  const { plugin, connection } = cfgs;\n\n  const eventStoreProto = {\n    createProducer(producerCfgs = {}) {\n      return producer({ plugin, connection, ...producerCfgs });\n    },\n    createConsumer(consumerCfgs = {}) {\n      return consumer({ plugin, connection, ...consumerCfgs });\n    }\n  };\n\n  return eventStoreProto;\n}\n",
+    "static": true,
+    "longname": "src/index.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 4,
+    "kind": "typedef",
+    "name": "CirceInstance",
+    "memberof": "src/index.js",
+    "static": true,
+    "longname": "src/index.js~CirceInstance",
+    "access": null,
+    "description": "",
+    "properties": [
+      {
+        "nullable": null,
+        "types": [
+          "Function"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "createProducer",
+        "description": "Producer factory to create producers from eventCfgs"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Function"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "createConsumer",
+        "description": "Consumer factory to create consumers from eventCfgs"
+      }
+    ],
+    "type": {
+      "types": [
+        "Object"
+      ],
+      "optional": false,
+      "name": "CirceInstance"
+    }
+  },
+  {
+    "__docId__": 5,
+    "kind": "function",
+    "name": "checkCfgs",
+    "memberof": "src/index.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/index.js~checkCfgs",
+    "access": "private",
+    "export": false,
+    "importPath": "@parkhub/circe/src/index.js",
+    "importStyle": null,
+    "description": "Check Configurations",
+    "lineNumber": 33,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "checkCfgs"
+      }
+    ],
+    "params": [
+      {
+        "name": "cfgs",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 6,
+    "kind": "function",
+    "name": "circe",
+    "memberof": "src/index.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/index.js~circe",
+    "access": null,
+    "export": true,
+    "importPath": "@parkhub/circe/src/index.js",
+    "importStyle": "circe",
+    "description": " Circe factory function",
+    "lineNumber": 54,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "circe"
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{CirceInstance} circe methods"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs",
+        "description": "Configuratoins for factory"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.plugin",
+        "description": "Plugin definition that matches the Plugin interface"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.connection",
+        "description": "Configurations for creating and publishing an Event"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "CirceInstance"
+      ],
+      "spread": false,
+      "description": "circe methods"
+    }
+  },
+  {
+    "__docId__": 7,
+    "kind": "file",
+    "name": "src/lib/initiateConsumerFromPlugin.js",
+    "content": "/**\n * Initiate the consumer from the plugin itself and pass it any configurations\n *\n * @function initiateConsumerFromPlugin\n * @private\n *\n * @param {Object} cfgs configuration for producer\n * @param {Object} cfgs.plugin Plugin factory method to create a new plugin\n * @returns {Promise<Object, Error>} A promise that fulfills with an instance of a producer from\n * plugin's consumer\n */\nexport default function initiateConsumerFromPlugin(cfgs) {\n  const { plugin } = cfgs;\n\n  return plugin().consumer(cfgs);\n}\n",
+    "static": true,
+    "longname": "src/lib/initiateConsumerFromPlugin.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 8,
+    "kind": "function",
+    "name": "initiateConsumerFromPlugin",
+    "memberof": "src/lib/initiateConsumerFromPlugin.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/lib/initiateConsumerFromPlugin.js~initiateConsumerFromPlugin",
+    "access": "private",
+    "export": true,
+    "importPath": "@parkhub/circe/src/lib/initiateConsumerFromPlugin.js",
+    "importStyle": "initiateConsumerFromPlugin",
+    "description": "Initiate the consumer from the plugin itself and pass it any configurations",
+    "lineNumber": 12,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "initiateConsumerFromPlugin"
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Promise<Object, Error>} A promise that fulfills with an instance of a producer from\nplugin's consumer"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs",
+        "description": "configuration for producer"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.plugin",
+        "description": "Plugin factory method to create a new plugin"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object, Error>"
+      ],
+      "spread": false,
+      "description": "A promise that fulfills with an instance of a producer from\nplugin's consumer"
+    }
+  },
+  {
+    "__docId__": 9,
+    "kind": "file",
+    "name": "src/lib/initiateProducerFromPlugin.js",
+    "content": "/**\n * Initiate the producer from the plugin itself and pass it any configurations\n *\n * @function initiateProducerFromPlugin\n * @private\n *\n * @param {Object} cfgs configuration for producer\n * @param {Object} cfgs.plugin Plugin factory method to create a new plugin\n * @returns {Promise<Object, Error>} A promise that fulfills with an instance of a producer from\n * plugin's producer\n */\nexport default function initiateProducerFromPlugin(cfgs) {\n  const { plugin } = cfgs;\n\n  return plugin().producer(cfgs);\n}\n",
+    "static": true,
+    "longname": "src/lib/initiateProducerFromPlugin.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 10,
+    "kind": "function",
+    "name": "initiateProducerFromPlugin",
+    "memberof": "src/lib/initiateProducerFromPlugin.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/lib/initiateProducerFromPlugin.js~initiateProducerFromPlugin",
+    "access": "private",
+    "export": true,
+    "importPath": "@parkhub/circe/src/lib/initiateProducerFromPlugin.js",
+    "importStyle": "initiateProducerFromPlugin",
+    "description": "Initiate the producer from the plugin itself and pass it any configurations",
+    "lineNumber": 12,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "initiateProducerFromPlugin"
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Promise<Object, Error>} A promise that fulfills with an instance of a producer from\nplugin's producer"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs",
+        "description": "configuration for producer"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.plugin",
+        "description": "Plugin factory method to create a new plugin"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object, Error>"
+      ],
+      "spread": false,
+      "description": "A promise that fulfills with an instance of a producer from\nplugin's producer"
+    }
+  },
+  {
+    "__docId__": 11,
+    "kind": "file",
+    "name": "src/producer.js",
+    "content": "import initiateProducerFromPlugin from './lib/initiateProducerFromPlugin';\n\n/**\n * Check Configurations\n *\n * @function checkPublishCfgs\n * @private\n */\nfunction checkPublishCfgs(cfgs) {\n  const errMsg = configuration => `\"${configuration}\" configuration is required`;\n  const { message, event } = cfgs;\n\n  if (!message) {\n    throw new Error(errMsg('message'));\n  }\n\n  if (!event) {\n    throw new Error(errMsg('event'));\n  }\n}\n\n/**\n * Producer factory that overrides the plugins publishEvent method and injects the validator logic.\n *\n * @function producer\n * @param {Object} cfgs configuration for producer\n * @param {Object} cfgs.plugin Plugin which provides actual logic for Kafka whose method will\n * be overriden\n * @param {Object} cfgs.validators A key-value map of events being published whose value is an\n * object with a validateAndCreateMessage method\n * @param {Object} cfgs.pluginCfgs Configurations that are specific to the plugin\n * @returns {Promise<Object, Error>} A promise that fulfills with an instance of a producer from\n * plugin\n */\nexport default async function producer(cfgs = {}) {\n  const initializedProducer = await initiateProducerFromPlugin(cfgs);\n  const { validators } = cfgs;\n\n  if (!validators) {\n    throw new Error('\"validators\" configuration is required');\n  }\n\n  const pluginPublishEvent = initializedProducer.publishEvent;\n\n  initializedProducer.publishEvent = ({ message, event, pluginCfgs = {} } = {}) => {\n    checkPublishCfgs({ message, event });\n\n    const validator = validators[event];\n\n    if (!validator) {\n      throw new Error(`Event \"${event}\" is not defined as a publishable event`);\n    }\n\n    const { validateAndCreateMessage } = validator;\n    const verifiedMsg = validateAndCreateMessage({ message });\n\n    // Call the original method from the plugin\n    pluginPublishEvent({\n      event,\n      message: verifiedMsg,\n      pluginCfgs\n    });\n  };\n\n  return initializedProducer;\n}\n",
+    "static": true,
+    "longname": "src/producer.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 12,
+    "kind": "function",
+    "name": "checkPublishCfgs",
+    "memberof": "src/producer.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/producer.js~checkPublishCfgs",
+    "access": "private",
+    "export": false,
+    "importPath": "@parkhub/circe/src/producer.js",
+    "importStyle": null,
+    "description": "Check Configurations",
+    "lineNumber": 9,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "checkPublishCfgs"
+      }
+    ],
+    "params": [
+      {
+        "name": "cfgs",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 13,
+    "kind": "function",
+    "name": "producer",
+    "memberof": "src/producer.js",
+    "generator": false,
+    "async": true,
+    "static": true,
+    "longname": "src/producer.js~producer",
+    "access": null,
+    "export": true,
+    "importPath": "@parkhub/circe/src/producer.js",
+    "importStyle": "producer",
+    "description": "Producer factory that overrides the plugins publishEvent method and injects the validator logic.",
+    "lineNumber": 35,
+    "unknown": [
+      {
+        "tagName": "@function",
+        "tagValue": "producer"
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Promise<Object, Error>} A promise that fulfills with an instance of a producer from\nplugin"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs",
+        "description": "configuration for producer"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.plugin",
+        "description": "Plugin which provides actual logic for Kafka whose method will\nbe overriden"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.validators",
+        "description": "A key-value map of events being published whose value is an\nobject with a validateAndCreateMessage method"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "cfgs.pluginCfgs",
+        "description": "Configurations that are specific to the plugin"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object, Error>"
+      ],
+      "spread": false,
+      "description": "A promise that fulfills with an instance of a producer from\nplugin"
+    }
+  },
+  {
+    "__docId__": 15,
+    "kind": "external",
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 16,
+    "kind": "external",
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 17,
+    "kind": "external",
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 18,
+    "kind": "external",
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 19,
+    "kind": "external",
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 20,
+    "kind": "external",
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 21,
+    "kind": "external",
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 22,
+    "kind": "external",
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 23,
+    "kind": "external",
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 24,
+    "kind": "external",
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 25,
+    "kind": "external",
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 26,
+    "kind": "external",
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 27,
+    "kind": "external",
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 28,
+    "kind": "external",
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 29,
+    "kind": "external",
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 30,
+    "kind": "external",
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 31,
+    "kind": "external",
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 32,
+    "kind": "external",
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 33,
+    "kind": "external",
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 34,
+    "kind": "external",
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 35,
+    "kind": "external",
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 36,
+    "kind": "external",
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 37,
+    "kind": "external",
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 38,
+    "kind": "external",
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 39,
+    "kind": "external",
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 40,
+    "kind": "external",
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 41,
+    "kind": "external",
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 42,
+    "kind": "external",
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 43,
+    "kind": "external",
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 44,
+    "kind": "external",
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 45,
+    "kind": "external",
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 46,
+    "kind": "external",
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 47,
+    "kind": "external",
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 48,
+    "kind": "external",
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 49,
+    "kind": "external",
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 50,
+    "kind": "external",
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 51,
+    "kind": "external",
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 52,
+    "kind": "external",
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 53,
+    "kind": "external",
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 54,
+    "kind": "external",
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 55,
+    "kind": "external",
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 56,
+    "kind": "external",
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 57,
+    "kind": "external",
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 58,
+    "kind": "external",
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 59,
+    "kind": "external",
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 60,
+    "kind": "external",
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 61,
+    "kind": "external",
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": "",
+    "lineNumber": 193,
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 63,
+    "kind": "external",
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 64,
+    "kind": "external",
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 65,
+    "kind": "external",
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 66,
+    "kind": "external",
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 67,
+    "kind": "external",
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 68,
+    "kind": "external",
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 69,
+    "kind": "external",
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 70,
+    "kind": "external",
+    "name": "AudioContext",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/AudioContext",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~AudioContext",
+    "access": null,
+    "description": "",
+    "lineNumber": 34,
+    "builtinExternal": true
+  }
+]

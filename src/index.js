@@ -46,12 +46,12 @@ function checkCfgs(cfgs) {
  *  Circe factory function
  *
  * @function circe
- * @param {Object} cfgs Configuratoins for factory
+ * @param {Object} cfgs configurations for factory
  * @param {Object} cfgs.plugin Plugin definition that matches the Plugin interface
  * @param {Object} cfgs.connection Configurations for creating and publishing an Event
  * @returns {CirceInstance} circe methods
  */
-export default function circe(cfgs = {}) {
+export default function circe(cfgs) {
   checkCfgs(cfgs);
 
   const { plugin, connection } = cfgs;

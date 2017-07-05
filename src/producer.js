@@ -28,11 +28,11 @@ function checkPublishCfgs(cfgs) {
  * be overriden
  * @param {Object} cfgs.validators A key-value map of events being published whose value is an
  * object with a validateAndCreateMessage method
- * @param {Object} cfgs.pluginCfgs Configurations that are specific to the plugin
+ * @param {Object} [cfgs.pluginCfgs] Configurations that are specific to the plugin
  * @returns {Promise<Object, Error>} A promise that fulfills with an instance of a producer from
  * plugin
  */
-export default async function producer(cfgs = {}) {
+export default async function producer(cfgs) {
   const initializedProducer = await initiateProducerFromPlugin(cfgs);
   const { validators } = cfgs;
 

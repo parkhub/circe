@@ -1,7 +1,14 @@
 {
   "sourceMaps": "inline",
+  "presets": [
+    ["env", {
+      "targets": {
+        "node": 8
+      },
+      "useBuiltIns": true
+    }]
+  ],
   "plugins": [
-    "transform-es2015-modules-commonjs",
     "transform-strict-mode",
     ["transform-object-rest-spread", { "useBuiltIns": true }]
   ]

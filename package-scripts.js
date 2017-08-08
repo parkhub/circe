@@ -1,3 +1,6 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable import/no-commonjs */
+
 const npsUtils = require('nps-utils');
 
 const series = npsUtils.series;
@@ -11,7 +14,7 @@ module.exports = {
       script: 'git-cz'
     },
     test: {
-      default: 'jest',
+      default: 'jest --coverage',
       watch: 'jest --watch'
     },
     build: {
@@ -23,10 +26,10 @@ module.exports = {
     },
     lint: {
       description: 'lint the entire project',
-      script: 'eslint .'
+      script: 'eslint src/**/*.js'
     },
     reportCoverage: {
-      description: 'Report coverage stats to codecov. This should be run after the `test` script',
+      description: 'Report coverage stats to codecov. Happens after testing',
       script: 'codecov'
     },
     release: {
@@ -36,7 +39,7 @@ module.exports = {
     validate: {
       description:
         'This runs several scripts to make sure things look good before committing or on clean install',
-      script: concurrent.nps('lint', 'build', 'test')
+      script: concurrent.nps('lint', 'test')
     },
     format: {
       description: 'Formats everything with prettier-eslint',

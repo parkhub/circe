@@ -51,7 +51,7 @@ module.exports = {
     },
     todo: {
       description: 'Generate TODO.md from in source TODO and FIXME tags',
-      script: 'leasot src/**/*.js'
+      script: 'leasot --reporter markdown src/**/*.js >> TODOS.md'
     }
   },
   options: {

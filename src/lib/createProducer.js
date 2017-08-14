@@ -1,11 +1,34 @@
+/* @flow */
+
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
 import formatKafkaMessage from './formatKafkaMessage';
-import createMiddlewareFlow from './createMiddlewareFlow';
+import createMiddlewareFlow, { type MiddlewareCfgs } from './createMiddlewareFlow';
 
-export default async function createProducer(cfgs = {}) {
-  const { connection, middleware = {}, ...producerCfgs } = cfgs;
+type ProducerCfgs = {
+  connection: string,
+  middleware?: MiddlewareCfgs,
+  [rdkafkaProducerCfg: any]: any
+};
 
+export type PublishCfgs = {|
+  topic: Topic,
+  partition?: number,
+  message: Message,
+  key?: string,
+  timeStamp?: number,
+  opaqueToken?: string
+|};
+
+type ProducerAPI = {|
+  publishEvent: PublishCfgs => void
+|};
+
+export default async function createProducer({
+  connection,
+  middleware = {},
+  ...producerCfgs
+}: ProducerCfgs): Promise<ProducerAPI> {
   if (!connection) {
     throw new Error('"connection" configuration is required');
   }
@@ -24,7 +47,7 @@ export default async function createProducer(cfgs = {}) {
   await pEvent(producer, 'ready');
 
   return {
-    publishEvent(publishCfgs = {}) {
+    publishEvent(publishCfgs: PublishCfgs): void {
       const { topic, message } = publishCfgs;
 
       if (!topic) {

@@ -1,18 +1,38 @@
+// @flow
+
 import uuid from 'uuid/v4';
 import identity from './identity';
 
-function isNullOrUndefined(value) {
-  return value === null || typeof value === 'undefined';
+type KeyGenStringType = string;
+
+type ModifyMessage = Message => Message;
+type GeneratedKeyModifier = {|
+  key: string,
+  modifyMessage: ModifyMessage
+|};
+
+type KeyGenCfgType = {|
+  topic: Topic,
+  keyProp?: string,
+  overrideKeyProp?: boolean
+|};
+
+export type KeyGenerator = PublishCfgs => GeneratedKeyModifier;
+export type KeyGeneratorCfg = KeyGenStringType | KeyGenCfgType;
+export type KeyGeneratorMap = Map<Topic, KeyGenerator>;
+
+function isNullOrUndefined<T>(value: T): boolean {
+  return value === null || value === undefined;
 }
 
-function doesKeyPropertyExist(keyProp, message) {
-  const exisingKeyValue = message[keyProp];
+function doesKeyPropertyExist(keyProp: string, object: Object): boolean {
+  const exisingKeyValue = object[keyProp];
 
   return !isNullOrUndefined(exisingKeyValue);
 }
 
-function stringTypeKeyGen({ key }) {
-  const newKey = key || uuid();
+function stringTypeKeyGen({ key }: PublishCfgs): GeneratedKeyModifier {
+  const newKey: string = key || uuid();
 
   return {
     key: newKey,
@@ -20,40 +40,44 @@ function stringTypeKeyGen({ key }) {
   };
 }
 
-function cfgTypeKeyGen(kGen) {
-  const { keyProp, overrideKeyProp = false } = kGen;
+function cfgTypeKeyGen(cfgs: KeyGenCfgType) {
+  const { keyProp, overrideKeyProp = 1 } = cfgs;
 
-  return ({ key }) => {
-    let newKey = key;
-    let newModifyMessage = identity;
+  return ({ key }: PublishCfgs): GeneratedKeyModifier => {
+    const generatedKey: string = key || uuid();
 
-    if (isNullOrUndefined(newKey)) {
-      newKey = uuid();
-    }
+    if (keyProp != null) {
+      const newModifyMessage = (message: Message): Message => {
+        if (typeof message !== 'object') {
+          return message;
+        }
 
-    if (keyProp) {
-      newModifyMessage = (message) => {
         // Check to make sure that key does not already exist
         if (doesKeyPropertyExist(keyProp, message) && !overrideKeyProp) {
           return message;
         }
 
         const keyObj = {
-          [keyProp]: newKey
+          [keyProp]: generatedKey
         };
 
         return { ...message, ...keyObj };
       };
+
+      return {
+        key: generatedKey,
+        modifyMessage: newModifyMessage
+      };
     }
 
     return {
-      key: newKey,
-      modifyMessage: newModifyMessage
+      key: generatedKey,
+      modifyMessage: identity
     };
   };
 }
 
-export default function createKeyGeneratorsMap(keyGenerators) {
+export default function createKeyGeneratorsMap(keyGenerators: KeyGeneratorCfg[]) {
   return keyGenerators.reduce((vMap, kGen) => {
     if (typeof kGen === 'string') {
       vMap.set(kGen, stringTypeKeyGen);

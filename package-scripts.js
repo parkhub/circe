@@ -36,10 +36,14 @@ module.exports = {
       description: 'We automate releases with semantic-release. This should only be run on travis',
       script: series('semantic-release pre', 'npm publish', 'semantic-release post')
     },
+    areWeFlow: {
+      description: 'Checks how many files ARE NOT flow-inized',
+      script: 'are-we-flow-yet src'
+    },
     validate: {
       description:
         'This runs several scripts to make sure things look good before committing or on clean install',
-      script: concurrent.nps('lint', 'test')
+      script: concurrent.nps('lint', 'areWeFlow', 'flow', 'test')
     },
     format: {
       description: 'Formats everything with prettier-eslint',
@@ -52,6 +56,10 @@ module.exports = {
     todo: {
       description: 'Generate TODO.md from in source TODO and FIXME tags',
       script: 'leasot --reporter markdown src/**/*.js >> TODOS.md'
+    },
+    flow: {
+      description: 'Run Flow',
+      script: 'flow check'
     }
   },
   options: {

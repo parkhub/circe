@@ -1,6 +1,6 @@
 {
   "sourceMaps": "inline",
-  "presets": [
+  "presets": ["flow",
     ["env", {
       "targets": {
         "node": 8

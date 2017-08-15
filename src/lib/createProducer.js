@@ -3,12 +3,15 @@
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
 import formatKafkaMessage from './formatKafkaMessage';
-import createMiddlewareFlow, { type MiddlewareCfgs } from './createMiddlewareFlow';
+import createMiddlewareFlow, {
+  type MiddlewareCfgs,
+  type ApplyMiddleware
+} from './createMiddlewareFlow';
 
-type ProducerCfgs = {
+export type ProducerCfgs = {
   connection: string,
   middleware?: MiddlewareCfgs,
-  [rdkafkaProducerCfg: any]: any
+  [rdkafkaProducerCfg: any]: any // Any other property, should we outline them?
 };
 
 export type PublishCfgs = {|
@@ -20,7 +23,7 @@ export type PublishCfgs = {|
   opaqueToken?: string
 |};
 
-type ProducerAPI = {|
+export type ProducerAPI = {|
   publishEvent: PublishCfgs => void
 |};
 
@@ -33,7 +36,7 @@ export default async function createProducer({
     throw new Error('"connection" configuration is required');
   }
 
-  const applyMiddleware = createMiddlewareFlow(middleware);
+  const applyMiddleware: ApplyMiddleware = createMiddlewareFlow(middleware);
   const defaultCfgs = {
     'metadata.broker.list': connection,
     'broker.version.fallback': '0.10.0', // If kafka node doesn't have API, use this instead
@@ -62,8 +65,8 @@ export default async function createProducer({
         publishCfgs
       );
 
-      const formattedMessage = formatKafkaMessage(newMessage);
-      const ts = timeStamp || Date.now();
+      const formattedMessage: Buffer = formatKafkaMessage(newMessage);
+      const ts: number = timeStamp || Date.now();
 
       producer.produce(topic, partition, formattedMessage, key, ts, opaqueToken);
     }

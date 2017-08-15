@@ -1,3 +1,5 @@
-export default function identity(data) {
-  return data;
+/* @flow */
+
+export default function identity<T>(value: T): T {
+  return value;
 }

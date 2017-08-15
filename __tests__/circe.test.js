@@ -18,10 +18,14 @@ describe('circe() API', () => {
 });
 
 describe('Producer', () => {
+  test('Should reject if no options are passed in', async () => {
+    await expect(circe.createProducer()).rejects.toBeDefined();
+  });
+
   test('Should reject if connection is not passed in', async () => {
     const expectedErrMsg = '"connection" configuration is required';
 
-    await expect(circe.createProducer()).rejects.toEqual(new Error(expectedErrMsg));
+    await expect(circe.createProducer({})).rejects.toEqual(new Error(expectedErrMsg));
   });
 
   test('Should create a new producer', async () => {
@@ -385,13 +389,49 @@ describe('Producer', () => {
         expect(finalMessage.keyProp).toBeDefined();
         expect(keyProp).toBe(key);
       });
+
+      test('Should auto-generate a UUID but just return a non-object message', async () => {
+        const testTopic = 'TestTopic';
+        const testMsg = 'This is a test';
+
+        const middleware = {
+          keyGenerators: [
+            {
+              topic: testTopic,
+              keyProp: 'keyProp'
+            }
+          ]
+        };
+
+        const producer = await circe.createProducer({ connection: 'fake:123', middleware });
+
+        producer.publishEvent({ topic: testTopic, message: testMsg });
+
+        expect(kafka.produce).toHaveBeenCalledTimes(1);
+        const testMsgCall = kafka.produce.mock.calls[0];
+        // const [topic, partition, msgBuf, key, timestamp, token] = kafka.produce.mock.calls[0];
+
+        const key = testMsgCall[3];
+        expect(key).toBeDefined();
+
+        const finalMessage = testMsgCall[2].toString();
+
+        expect(finalMessage).toBe(testMsg);
+      });
     });
   });
 
-  test('Should throw if topic or message are missing when publishing', async () => {
+  test('Should throw if topic is missing when publishing', async () => {
     const producer = await circe.createProducer({ connection: 'fake:123' });
 
     expect(() => producer.publishEvent()).toThrow();
     expect(() => producer.publishEvent({ topic: 'TestTopic' })).toThrow();
+  });
+
+  test('Should throw if message is missing when publishing', async () => {
+    const producer = await circe.createProducer({ connection: 'fake:123' });
+
+    expect(() => producer.publishEvent()).toThrow();
+    expect(() => producer.publishEvent({ message: 'TestTopic' })).toThrow();
   });
 });

@@ -2,24 +2,26 @@
 
 import cloneDeep from 'lodash.clonedeep';
 import createValidatorsMap, { type ValidatorMap, type Validator } from './createValidatorsMap';
-import createKeyGeneratorsMap, { type KeyGenerator } from './createKeyGeneratorsMap';
+import createKeyGeneratorsMap, {
+  type KeyGeneratorCfg,
+  type KeyGeneratorMap
+} from './createKeyGeneratorsMap';
 
 export type MiddlewareCfgs = {|
   preValidators?: Validator[],
   postValidators?: Validator[],
-  keyGenerators?: KeyGenerator[]
+  keyGenerators?: KeyGeneratorCfg[]
 |};
 
-type ApplyMiddleware = (publishCfgs: PublishCfgs) => PublishCfgs;
-type Exact<T> = T & $Shape<T>;
+export type ApplyMiddleware = (publishCfgs: PublishCfgs) => PublishCfgs;
 
 export default function createMiddlewareFlow(middleware: MiddlewareCfgs): ApplyMiddleware {
   const { preValidators = [], postValidators = [], keyGenerators = [] } = middleware;
   const postValidatorsMap: ValidatorMap = createValidatorsMap(postValidators);
   const preValidatorsMap: ValidatorMap = createValidatorsMap(preValidators);
-  const keyGeneratorsMap = createKeyGeneratorsMap(keyGenerators);
+  const keyGeneratorsMap: KeyGeneratorMap = createKeyGeneratorsMap(keyGenerators);
 
-  return (publishCfgs: PublishCfgs): Exact<PublishCfgs> => {
+  return (publishCfgs: PublishCfgs): PublishCfgs => {
     const { topic, message, key } = publishCfgs;
 
     const keyGen = keyGeneratorsMap.get(topic);

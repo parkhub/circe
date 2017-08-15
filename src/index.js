@@ -6,7 +6,7 @@
  * @author Daniel Olivares
  */
 
-import createProducer from './lib/createProducer';
+import createProducer, { type ProducerAPI, type ProducerCfgs } from './lib/createProducer';
 
 /* TODOS
  * TODO UPDATE DOCS
@@ -14,7 +14,11 @@ import createProducer from './lib/createProducer';
  * TODO Improve DOCS by adding examples etc
 */
 
-const circe = {
+type CirceAPI = {
+  createProducer: ProducerCfgs => Promise<ProducerAPI>
+};
+
+const circe: CirceAPI = {
   createProducer,
   createConsumer() {}
 };

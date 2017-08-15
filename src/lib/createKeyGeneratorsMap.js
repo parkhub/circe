@@ -1,4 +1,4 @@
-// @flow
+/* @flow */
 
 import uuid from 'uuid/v4';
 import identity from './identity';
@@ -40,13 +40,11 @@ function stringTypeKeyGen({ key }: PublishCfgs): GeneratedKeyModifier {
   };
 }
 
-function cfgTypeKeyGen(cfgs: KeyGenCfgType) {
-  const { keyProp, overrideKeyProp = 1 } = cfgs;
-
+function cfgTypeKeyGen({ keyProp = '', overrideKeyProp = false }: KeyGenCfgType) {
   return ({ key }: PublishCfgs): GeneratedKeyModifier => {
     const generatedKey: string = key || uuid();
 
-    if (keyProp != null) {
+    if (keyProp) {
       const newModifyMessage = (message: Message): Message => {
         if (typeof message !== 'object') {
           return message;
@@ -77,7 +75,7 @@ function cfgTypeKeyGen(cfgs: KeyGenCfgType) {
   };
 }
 
-export default function createKeyGeneratorsMap(keyGenerators: KeyGeneratorCfg[]) {
+export default function createKeyGeneratorsMap(keyGenerators: KeyGeneratorCfg[]): KeyGeneratorMap {
   return keyGenerators.reduce((vMap, kGen) => {
     if (typeof kGen === 'string') {
       vMap.set(kGen, stringTypeKeyGen);

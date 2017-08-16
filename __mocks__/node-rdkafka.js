@@ -5,43 +5,49 @@ import util from 'util';
 import delay from 'delay';
 
 const produce = jest.fn();
-
-const disconnect = jest.fn();
+const producerDisconnect = jest.fn();
+const producerConnect = jest.fn(function connect() {
+  delay(200).then(() => this.emit('ready'));
+});
 
 function Producer() {}
-const emitter = event.EventEmitter;
 
-Producer.prototype.isNative = true;
-Producer.prototype.disconnect = disconnect;
-Producer.prototype.connect = function connect() {
-  delay(200).then(() => this.emit('ready'));
-};
+Producer.prototype.disconnect = producerDisconnect;
+Producer.prototype.connect = producerConnect;
 
 Producer.prototype.produce = produce;
 
 util.inherits(Producer, event.EventEmitter);
-// const unsubscribe = jest.fn();
-// const subscribe = jest.fn();
-// const KafkaConsumer = jest.fn();
-// const consume = jest.fn();
-//
-// KafkaConsumer.prototype.isNative = true;
-// KafkaConsumer.prototype.consume = consume;
-// KafkaConsumer.prototype.disconnect = disconnect;
-// KafkaConsumer.prototype.unsubscribe = unsubscribe;
-// KafkaConsumer.prototype.subscribe = subscribe;
-// KafkaConsumer.prototype.connect = connect;
-// KafkaConsumer.prototype.on = event.on;
+
+const consume = jest.fn();
+const consumerDisconnect = jest.fn();
+const subscribe = jest.fn();
+const unsubscribe = jest.fn();
+const consumerConnect = jest.fn(function connect() {
+  delay(200).then(() => this.emit('ready'));
+});
+
+const KafkaConsumer = jest.fn();
+
+KafkaConsumer.prototype.disconnect = consumerDisconnect;
+KafkaConsumer.prototype.connect = consumerConnect;
+
+KafkaConsumer.prototype.consume = consume;
+KafkaConsumer.prototype.subscribe = subscribe;
+KafkaConsumer.prototype.unsubscribe = unsubscribe;
+
+util.inherits(KafkaConsumer, event.EventEmitter);
 
 const nodeRdkafka = {
   produce,
-  // unsubscribe,
-  // subscribe,
-  disconnect,
+  unsubscribe,
+  subscribe,
   Producer,
+  KafkaConsumer,
+  consumerConnect,
+  producerConnect,
   // KafkaConsumer,
-  // consume,
-  emitter
+  consume
 };
 
 export default nodeRdkafka;

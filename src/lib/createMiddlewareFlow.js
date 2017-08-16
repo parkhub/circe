@@ -15,8 +15,16 @@ export type MiddlewareCfgs = {|
 
 export type ApplyMiddleware = (publishCfgs: PublishCfgs) => PublishCfgs;
 
-export default function createMiddlewareFlow(middleware: MiddlewareCfgs): ApplyMiddleware {
-  const { preValidators = [], postValidators = [], keyGenerators = [] } = middleware;
+/**
+ * Creates a function that applies all the middleware for each message on a topic.
+ * @param {MiddlewareCfgs} middleware Middleware configurations
+ * @private
+*/
+export default function createMiddlewareFlow({
+  preValidators = [],
+  postValidators = [],
+  keyGenerators = []
+}: MiddlewareCfgs): ApplyMiddleware {
   const postValidatorsMap: ValidatorMap = createValidatorsMap(postValidators);
   const preValidatorsMap: ValidatorMap = createValidatorsMap(preValidators);
   const keyGeneratorsMap: KeyGeneratorMap = createKeyGeneratorsMap(keyGenerators);

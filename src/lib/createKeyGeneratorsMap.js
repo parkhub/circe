@@ -75,6 +75,10 @@ function cfgTypeKeyGen({ keyProp = '', overrideKeyProp = false }: KeyGenCfgType)
   };
 }
 
+/**
+ * Create a map of key generator configurations keyed on a topic
+ * @private
+*/
 export default function createKeyGeneratorsMap(keyGenerators: KeyGeneratorCfg[]): KeyGeneratorMap {
   return keyGenerators.reduce((vMap, kGen) => {
     if (typeof kGen === 'string') {

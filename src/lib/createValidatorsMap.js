@@ -14,6 +14,10 @@ export type Validator = {|
   validate: Validate
 |};
 
+/**
+ * Creates a validators map keyed on topics
+ *
+*/
 export default function createValidatorsMap(validators: Validator[]): ValidatorMap {
   return validators.reduce((vMap: ValidatorMap, validator: Validator) => {
     const { topic, validate } = validator;

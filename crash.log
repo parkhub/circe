@@ -1,0 +1,12 @@
+PID 29298 received SIGSEGV for address: 0x0
+0   segfault-handler.node               0x00000001038f3178 _ZL16segfault_handleriP9__siginfoPv + 280
+1   libsystem_platform.dylib            0x00007fff8e123b3a _sigtramp + 26
+2   ???                                 0x0000700002b99be0 0x0 + 123145348029408
+3   node-librdkafka.node                0x000000010882bef5 rd_kafka_seek + 164
+4   node-librdkafka.node                0x0000000108816afd _ZN7RdKafka17KafkaConsumerImpl4seekERKNS_14TopicPartitionEi + 115
+5   node-librdkafka.node                0x000000010880bd00 _ZN9NodeKafka13KafkaConsumer4SeekERKN7RdKafka14TopicPartitionEi + 172
+6   node-librdkafka.node                0x0000000108814540 _ZN9NodeKafka7Workers17KafkaConsumerSeek7ExecuteEv + 46
+7   node                                0x0000000100891b54 worker + 90
+8   libsystem_pthread.dylib             0x00007fff8e12d93b _pthread_body + 180
+9   libsystem_pthread.dylib             0x00007fff8e12d887 _pthread_body + 0
+10  libsystem_pthread.dylib             0x00007fff8e12d08d thread_start + 13

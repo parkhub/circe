@@ -2,20 +2,17 @@
 
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
+import createHandler, { type TopicHandlerArg } from './createHandlersMap';
 
 type ConsumerCfgs = {|
   connection: string,
   groupId: string,
+  topicCfgs: Object,
   [rdkafkaConsumerCfg: any]: any // Any other property, should we outline them?
 |};
 
-type SubscribeCfgs = {|
-  event: string | string[],
-  handler: Message => void
-|};
-
 type ConsumerAPI = {|
-  subscribeToEvent: SubscribeCfgs => void
+  subscribe: (topic: string, handler: TopicHandlerArg) => void
 |};
 
 export default async function createconsumer({
@@ -24,12 +21,10 @@ export default async function createconsumer({
   topicCfgs = {},
   ...consumerCfgs
 }: ConsumerCfgs): Promise<ConsumerAPI> {
-  if (!connection) {
-    throw new Error('"connection" configuration is required');
-  }
+  if (!connection || !groupId) {
+    const missingProp = !connection ? 'connection' : 'groupId';
 
-  if (!groupId) {
-    throw new Error('"groupId" configuration is required');
+    throw new Error(`${missingProp} is required`);
   }
 
   const baseCfgs = {
@@ -44,13 +39,17 @@ export default async function createconsumer({
   await pEvent(consumer, 'ready');
 
   return {
-    subscribeToEvent({ event, handler }: SubscribeCfgs): void {
-      if (!event || !handler) {
-        throw new Error('Missing configuration when subscring to an event');
+    subscribe(topic: string, handler: TopicHandlerArg): void {
+      if (!topic || !handler) {
+        const missingProp = !topic ? 'topic' : 'handler';
+
+        throw new Error(`${missingProp} is required`);
       }
 
-      const wrappedEvent = Array.isArray(event) ? event : [event];
-      consumer.subscribe(wrappedEvent, handler);
+      const wrappedEvent = Array.isArray(topic) ? topic : [topic];
+      const wrappedHandler = createHandler(handler);
+
+      consumer.subscribe(wrappedEvent, wrappedHandler);
     }
   };
 }

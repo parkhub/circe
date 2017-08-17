@@ -12,7 +12,7 @@ test('Should reject if no configs are passed in', async () => {
 });
 
 test('Should reject if connection is not passed in', async () => {
-  const expectedErrMsg = '"connection" configuration is required';
+  const expectedErrMsg = 'connection is required';
 
   await expect(createProducer({})).rejects.toEqual(new Error(expectedErrMsg));
 });

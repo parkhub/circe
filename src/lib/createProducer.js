@@ -84,7 +84,7 @@ export default async function createProducer({
   ...producerCfgs
 }: ProducerCfgs): Promise<ProducerAPI> {
   if (!connection) {
-    throw new Error('"connection" configuration is required');
+    throw new Error('connection is required');
   }
 
   const applyMiddleware: ApplyMiddleware = createMiddlewareFlow(middleware);
@@ -104,12 +104,10 @@ export default async function createProducer({
     publishEvent(publishCfgs: PublishCfgs): void {
       const { topic, message } = publishCfgs;
 
-      if (!topic) {
-        throw new Error('"topic" is required');
-      }
+      if (!topic || !message) {
+        const missingProp = !topic ? 'topic' : 'message';
 
-      if (!message) {
-        throw new Error('"message" is required');
+        throw new Error(`${missingProp} is required`);
       }
 
       const { partition, message: newMessage, key, timeStamp, opaqueToken } = applyMiddleware(

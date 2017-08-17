@@ -97,6 +97,7 @@
     "access": "public"
   },
   "dependencies": {
+    "is-json": "^2.0.1",
     "lodash.clonedeep": "^4.5.0",
     "node-rdkafka": "^1.0.6",
     "p-event": "^1.3.0",

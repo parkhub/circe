@@ -21,7 +21,16 @@ util.inherits(Producer, event.EventEmitter);
 
 const consume = jest.fn();
 const consumerDisconnect = jest.fn();
-const subscribe = jest.fn();
+const subscribe = jest.fn(function subscribe(eventsToSubscribeto, handler) {
+  const events = this.events || {};
+
+  eventsToSubscribeto.forEach((e) => {
+    events[e] = handler;
+  });
+
+  this.events = events;
+});
+
 const unsubscribe = jest.fn();
 const consumerConnect = jest.fn(function connect() {
   delay(200).then(() => this.emit('ready'));
@@ -35,6 +44,14 @@ KafkaConsumer.prototype.connect = consumerConnect;
 KafkaConsumer.prototype.consume = consume;
 KafkaConsumer.prototype.subscribe = subscribe;
 KafkaConsumer.prototype.unsubscribe = unsubscribe;
+KafkaConsumer.prototype.triggerEvent = jest.fn(function triggerEvent(
+  eventToTrigger,
+  argsForHandler
+) {
+  const eventHandler = this.events[eventToTrigger];
+
+  eventHandler(argsForHandler);
+});
 
 util.inherits(KafkaConsumer, event.EventEmitter);
 

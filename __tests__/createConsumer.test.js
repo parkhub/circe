@@ -266,3 +266,52 @@ describe('.subscribe', () => {
     expect(handler).toHaveBeenCalledWith({ message, partition: 1 });
   });
 });
+
+describe('Middleware', () => {
+  test('Should perform a pre-validation before calling handler', async () => {
+    const validate = jest.fn();
+    const consumerCfgs = {
+      connection: 'kafka:123',
+      groupId: 'one',
+      baseLibCfg: 'test',
+      topicCfgs: {
+        topicCfg: 'test-topic-cfg'
+      },
+      middleware: {
+        preValidators: [
+          {
+            topic: 'TEST_EVENT',
+            validate
+          }
+        ]
+      }
+    };
+
+    const consumer = await createConsumer(consumerCfgs);
+
+    const topic = 'TEST_EVENT';
+    const handler = jest.fn();
+    const handlers = [
+      {
+        topic,
+        handler
+      }
+    ];
+
+    consumer.subscribe(topic, handlers);
+
+    const message = {
+      test: 'test message'
+    };
+
+    const triggerMsg = {
+      topic,
+      value: Buffer.from(JSON.stringify(message)),
+      partition: 1
+    };
+
+    kafka.KafkaConsumer.mock.instances[0].triggerEvent(topic, triggerMsg);
+
+    expect(validate).toHaveBeenCalledWith(message);
+  });
+});

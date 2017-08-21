@@ -45,30 +45,8 @@
 
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
+import { loadMiddleWare } from '../middleware';
 import formatKafkaMessage from './formatKafkaMessage';
-import createMiddlewareFlow, {
-  type MiddlewareCfgs,
-  type ApplyMiddleware
-} from './createMiddlewareFlow';
-
-export type ProducerCfgs = {
-  connection: string,
-  middleware?: MiddlewareCfgs,
-  [rdkafkaProducerCfg: any]: any // Any other property, should we outline them?
-};
-
-export type PublishCfgs = {|
-  topic: Topic,
-  partition?: number,
-  message: Message,
-  key?: string,
-  timeStamp?: number,
-  opaqueToken?: string
-|};
-
-export type ProducerAPI = {|
-  publishEvent: PublishCfgs => void
-|};
 
 /**
  * Creates a new producer with the passed in configurations.
@@ -78,7 +56,7 @@ export type ProducerAPI = {|
  * @param {Middleware} [producerCfgs.middleware] middleware {@link Middleware} configuration
  * @returns {Promise<ProducerAPI}
 */
-export default async function createProducer({
+export default async function create({
   connection,
   middleware = {},
   ...producerCfgs
@@ -87,7 +65,7 @@ export default async function createProducer({
     throw new Error('connection is required');
   }
 
-  const applyMiddleware: ApplyMiddleware = createMiddlewareFlow(middleware);
+  const applyMiddleware: ApplyMiddleware = loadMiddleWare(middleware);
   const defaultCfgs = {
     'metadata.broker.list': connection,
     'broker.version.fallback': '0.10.0', // If kafka node doesn't have API, use this instead

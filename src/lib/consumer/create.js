@@ -2,22 +2,13 @@
 
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
-import createHandler, { type TopicHandlerArg } from './createHandlersMap';
+import createHandler from './createHandler';
+import loadMiddleware from '../middleware';
 
-type ConsumerCfgs = {|
-  connection: string,
-  groupId: string,
-  topicCfgs: Object,
-  [rdkafkaConsumerCfg: any]: any // Any other property, should we outline them?
-|};
-
-type ConsumerAPI = {|
-  subscribe: (topic: string, handler: TopicHandlerArg) => void
-|};
-
-export default async function createconsumer({
+export default async function create({
   connection,
   groupId,
+  middleware = {},
   topicCfgs = {},
   ...consumerCfgs
 }: ConsumerCfgs): Promise<ConsumerAPI> {
@@ -38,8 +29,10 @@ export default async function createconsumer({
 
   await pEvent(consumer, 'ready');
 
+  const applyMiddleware = loadMiddleware(middleware);
+
   return {
-    subscribe(topic: string, handler: TopicHandlerArg): void {
+    subscribe(topic: string, handler: TopicHandler): void {
       if (!topic || !handler) {
         const missingProp = !topic ? 'topic' : 'handler';
 
@@ -47,7 +40,7 @@ export default async function createconsumer({
       }
 
       const wrappedEvent = Array.isArray(topic) ? topic : [topic];
-      const wrappedHandler = createHandler(handler);
+      const wrappedHandler = createHandler(handler, applyMiddleware);
 
       consumer.subscribe(wrappedEvent, wrappedHandler);
     }

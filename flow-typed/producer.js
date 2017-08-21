@@ -10,3 +10,13 @@ type PublishCfgs = {
   timeStamp?: number,
   opaqueToken?: string
 };
+
+type ProducerCfgs = {
+  connection: string,
+  middleware?: Middleware,
+  [rdkafkaProducerCfg: any]: any // Any other property, should we outline them?
+};
+
+type ProducerAPI = {|
+  publishEvent: PublishCfgs => void
+|};

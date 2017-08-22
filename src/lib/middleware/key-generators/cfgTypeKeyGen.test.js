@@ -1,4 +1,7 @@
 import cfgTypeKeyGen from './cfgTypeKeyGen';
+import createUUID from './createUUID';
+
+jest.mock('./createUUID');
 
 test('Should return a function', () => {
   const keyGen = cfgTypeKeyGen({});
@@ -6,7 +9,7 @@ test('Should return a function', () => {
   expect(typeof keyGen).toBe('function');
 });
 
-test('Should use key param instead of generated one', () => {
+test('Should use key argument instead generating a key', () => {
   const cfgs = {
     keyProp: 'testKeyProp'
   };
@@ -29,6 +32,7 @@ test('Should use key param instead of generated one', () => {
 
   expect(finalMessage).toEqual(expectedFinalMessage);
   expect(finalKey).toEqual(key);
+  expect(createUUID).not.toHaveBeenCalled();
 });
 
 test('Should generate a new key and override keyProp', () => {
@@ -48,7 +52,7 @@ test('Should generate a new key and override keyProp', () => {
 
   expect(finalMessage.testKeyProp).not.toBe(originalKeyValue);
   expect(finalKey).not.toBe(originalKeyValue);
-  expect(finalKey).toBe(finalMessage.testKeyProp);
+  expect(finalKey).toBe('random string');
 });
 
 test('Should return the string message', () => {
@@ -63,5 +67,5 @@ test('Should return the string message', () => {
   const finalKey = keyResult.key;
 
   expect(finalMessage).toBe(message);
-  expect(finalKey).toBeDefined();
+  expect(finalKey).toBe('random string');
 });

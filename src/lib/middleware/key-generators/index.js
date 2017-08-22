@@ -1,7 +1,5 @@
 /* @flow */
 
-import loadKeyGenerators from './loadKeyGenerators';
+import keyGenerators from './loadKeyGenerators';
 
-export default {
-  load: loadKeyGenerators
-};
+export default keyGenerators;

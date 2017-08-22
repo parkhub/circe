@@ -1,7 +1,5 @@
 /* @flow */
 
-import loadValidators from './loadValidators';
+import validators from './loadValidators';
 
-export default {
-  load: loadValidators
-};
+export default validators;

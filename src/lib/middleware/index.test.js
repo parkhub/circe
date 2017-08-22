@@ -1,6 +1,5 @@
-import api from './';
+import middleware from './';
 
-test('Should expost middleware API', () => {
-  expect(api.loadMiddleware).toBeDefined();
-  expect(typeof api.loadMiddleware).toBe('function');
+test('Should expose middleware factory', () => {
+  expect(typeof middleware).toBe('function');
 });

@@ -1,6 +1,5 @@
-import api from './';
+import keyGen from './';
 
-test('Should expose key-generator API', () => {
-  expect(api.load).toBeDefined();
-  expect(typeof api.load).toBe('function');
+test('Should expose key-generator factory', () => {
+  expect(typeof keyGen).toBe('function');
 });

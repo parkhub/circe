@@ -1,4 +1,7 @@
 import stringTypeKeyGen from './stringTypeKeyGen';
+import createUUID from './createUUID';
+
+jest.mock('./createUUID');
 
 test('Should return the same key passed in without affecting message', () => {
   const originalKey = '1234';
@@ -14,6 +17,7 @@ test('Should return the same key passed in without affecting message', () => {
 
   expect(finalMessage).toEqual(message);
   expect(finalKey).toEqual(originalKey);
+  expect(createUUID).not.toHaveBeenCalled();
 });
 
 test('Should generate a key without affecting message', () => {
@@ -27,7 +31,7 @@ test('Should generate a key without affecting message', () => {
   const finalMessage = result.message;
   const finalKey = result.key;
 
+  expect(createUUID).toHaveBeenCalled();
   expect(finalMessage).toEqual(message);
-  expect(finalKey).toBeDefined();
-  expect(typeof finalKey).toBe('string');
+  expect(finalKey).toBe('random string');
 });

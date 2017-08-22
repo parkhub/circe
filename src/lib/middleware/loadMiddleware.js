@@ -1,7 +1,7 @@
 /* @flow */
 
 import cloneDeep from 'lodash.clonedeep';
-import keyGener from './key-generators';
+import keyGens from './key-generators';
 import validators from './validators';
 
 /**
@@ -13,9 +13,9 @@ export default function loadMiddleware({
   postValidators = [],
   keyGenerators = []
 }: Middleware): ApplyMiddleware {
-  const keyGeneratorsMap = keyGener.load(keyGenerators);
-  const preValidatorsMap = validators.load(preValidators);
-  const postValidatorsMap = validators.load(postValidators);
+  const keyGeneratorsMap = keyGens(keyGenerators);
+  const preValidatorsMap = validators(preValidators);
+  const postValidatorsMap = validators(postValidators);
 
   return ({ topic, message, key }) => {
     const keyGen = keyGeneratorsMap.get(topic);

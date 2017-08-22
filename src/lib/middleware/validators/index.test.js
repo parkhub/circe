@@ -1,6 +1,5 @@
 import validators from './';
 
-test('Should return validators API', () => {
-  expect(validators.load).toBeDefined();
-  expect(typeof validators.load).toBe('function');
+test('Should return validators factory', () => {
+  expect(typeof validators).toBe('function');
 });

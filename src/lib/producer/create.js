@@ -1,51 +1,8 @@
 /* @flow */
 
-/**
- * Kafka keys are different than keys on a JS object or any data object. These keys can be attached
- * to an message(if its an object) if you pass it in, or if you want one generated for you.
- * 
- * We use uuid/v4 to generated unique IDs.
- *
- * Configurations for key generator middleware. By default, keys WILL NOT be generated for 
- * produced messages. If a key is passed in but no key gen is configured, it will STILL be used 
- * as the key to produce on the Kafka topic.
- *
- * @typedef {Object} keyGenCfg key generator configurations
- * @property {string} topic topic that will use this generator
- * @property {string} [keyProp] optional, if message is an object, the key will be added to the 
- *  message on this key as well.
- * @property {boolean} [overrideKeyProp] (optional, default `false`) if a message already contains
- *  the property in the keyProp, this will override it with the newly generated key. However, the
- *  GENERATED KEY will still be used to key off the kafka message.
- */
-
-/**
- * A validator configuration.
- *
- * @typedef {Object} validator validator configurations
- * @property {string} topic topic that will use this validation
- * @property {Function} validate the validate function which can THROW if validation does not happen
- *  this means that if a validation fails, you have to throw.
- */
-
-/**
- * An object whose keys represent middleware configurations available:
- *  - preValidators
- *  - postValidators
- *  - keyGenerators
- *
- * @typedef {Object} Middleware middleware configurations
- * @property {Validator[]} [preValidators] validators {@link Validator} that willl be executed on a 
- *  message before any other middleware 
- * @property {Validator[]} [postValidators] validators {@link Validator} that will be executed 
- *  AFTER every other middleware
- * @property {keyGenCfg[]} [keyGenerators] key generators {@link KeyGenCfg} that get applied to 
- *  each topic defined. If none are defined, then a key will NOT be generated
- */
-
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
-import { loadMiddleWare } from '../middleware';
+import loadMiddleware from '../middleware';
 import formatKafkaMessage from './formatKafkaMessage';
 
 /**
@@ -65,7 +22,7 @@ export default async function create({
     throw new Error('connection is required');
   }
 
-  const applyMiddleware: ApplyMiddleware = loadMiddleWare(middleware);
+  const applyMiddleware: ApplyMiddleware = loadMiddleware(middleware);
   const defaultCfgs = {
     'metadata.broker.list': connection,
     'broker.version.fallback': '0.10.0', // If kafka node doesn't have API, use this instead
@@ -79,8 +36,8 @@ export default async function create({
   await pEvent(producer, 'ready');
 
   return {
-    publishEvent(publishCfgs: PublishCfgs): void {
-      const { topic, message } = publishCfgs;
+    publishEvent({ topic, message, partition, timeStamp, opaqueToken, key }: PublishCfgs): void {
+      // const { topic, message, partition, timeStamp, opaqueToken, key } = publishCfgs;
 
       if (!topic || !message) {
         const missingProp = !topic ? 'topic' : 'message';
@@ -88,14 +45,12 @@ export default async function create({
         throw new Error(`${missingProp} is required`);
       }
 
-      const { partition, message: newMessage, key, timeStamp, opaqueToken } = applyMiddleware(
-        publishCfgs
-      );
+      const { message: newMessage, key: newKey } = applyMiddleware({ topic, message, key });
 
       const formattedMessage: Buffer = formatKafkaMessage(newMessage);
       const ts: number = timeStamp || Date.now();
 
-      producer.produce(topic, partition, formattedMessage, key, ts, opaqueToken);
+      producer.produce(topic, partition, formattedMessage, newKey, ts, opaqueToken);
     }
   };
 }

@@ -21,8 +21,8 @@ type CirceAPI = {|
 |};
 
 const circe: CirceAPI = {
-  createProducer: producer.create,
-  createConsumer: consumer.create
+  createProducer: producer,
+  createConsumer: consumer
 };
 
 export default circe;

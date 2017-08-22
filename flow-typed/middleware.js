@@ -20,12 +20,12 @@ type KeyGenResult = {|
   message: Message
 |};
 
-type KeyGeneratorArgs = {
-  key: string,
+type KeyGeneratorParams = {
+  key?: string,
   message: Message
 };
 
-type KeyGenerator = KeyGeneratorArgs => KeyGenResult;
+type KeyGenerator = KeyGeneratorParams => KeyGenResult;
 type KeyGeneratorsCfg = KeyGenStringType | KeyGenCfgType;
 
 type ApplyMiddlewareResult = {|
@@ -33,7 +33,7 @@ type ApplyMiddlewareResult = {|
   key: string
 |};
 
-type ApplyMiddleware = ({ topic: string, message: Message, key: string }) => ApplyMiddlewareResult;
+type ApplyMiddleware = ({ topic: Topic, message: Message, key?: string }) => ApplyMiddlewareResult;
 
 type Middleware = {|
   preValidators?: Validator[],

@@ -33,5 +33,7 @@ type TopicHandler = Array<TopicHandlerCfg> | Handler;
 
 type ConsumerAPI = {|
   subscribe: (topic: string, handler: TopicHandler) => void,
-  disconnect: () => Promise<void>
+  disconnect: () => Promise<void>,
+  unsubscribe: () => void,
+  addListener: any => void
 |};

@@ -51,6 +51,14 @@ export default async function create({
       const ts: number = timeStamp || Date.now();
 
       producer.produce(topic, partition, formattedMessage, newKey, ts, opaqueToken);
+    },
+    disconnect() {
+      producer.disconnect();
+
+      return pEvent(producer, 'disconnected');
+    },
+    addListener(...args) {
+      producer.on(...args);
     }
   };
 }

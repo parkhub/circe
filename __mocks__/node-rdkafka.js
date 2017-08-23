@@ -5,12 +5,14 @@ import util from 'util';
 import delay from 'delay';
 
 const produce = jest.fn();
-const producerDisconnect = jest.fn();
+const producerDisconnect = jest.fn(function disconnect() {
+  delay(200).then(() => this.emit('disconnected'));
+});
 const producerConnect = jest.fn(function connect() {
   delay(200).then(() => this.emit('ready'));
 });
 
-function Producer() {}
+const Producer = jest.fn();
 
 Producer.prototype.disconnect = producerDisconnect;
 Producer.prototype.connect = producerConnect;
@@ -66,6 +68,7 @@ const nodeRdkafka = {
   KafkaConsumer,
   consumerConnect,
   producerConnect,
+  producerDisconnect,
   consumerDisconnect,
   consume
 };

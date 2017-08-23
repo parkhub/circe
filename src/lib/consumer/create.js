@@ -51,6 +51,12 @@ export default async function create({
       consumer.disconnect();
 
       return pEvent(consumer, 'disconnected');
+    },
+    unsubscribe() {
+      consumer.unsubscribe();
+    },
+    addListener(...args) {
+      consumer.on(...args);
     }
   };
 }

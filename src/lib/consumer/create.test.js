@@ -173,7 +173,7 @@ describe('.subscribe', () => {
 });
 
 describe('.disconnect()', () => {
-  test('Should call disconnect from base plugin', async () => {
+  test('Should call disconnect from base library', async () => {
     const consumerCfgs = {
       connection: 'kafka:123',
       groupId: 'one',
@@ -186,5 +186,41 @@ describe('.disconnect()', () => {
 
     await consumer.disconnect();
     expect(kafka.consumerDisconnect).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('.unsubscribe()', () => {
+  test('Should call unsubscribe from base library', async () => {
+    const consumerCfgs = {
+      connection: 'kafka:123',
+      groupId: 'one',
+      baseLibCfg: 'test',
+      topicCfgs: {
+        topicCfg: 'test-topic-cfg'
+      }
+    };
+    const consumer = await create(consumerCfgs);
+
+    consumer.unsubscribe();
+    expect(kafka.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('.addListener', () => {
+  test('Should add a listener to base library', async () => {
+    const consumerCfgs = {
+      connection: 'kafka:123',
+      groupId: 'one',
+      baseLibCfg: 'test',
+      topicCfgs: {
+        topicCfg: 'test-topic-cfg'
+      }
+    };
+    const consumer = await create(consumerCfgs);
+
+    const kafkaInstance = kafka.KafkaConsumer.mock.instances[0];
+    kafkaInstance.on = jest.fn();
+    consumer.addListener('hello', 'hi', { test: 'test' });
+    expect(kafkaInstance.on).toHaveBeenCalledWith('hello', 'hi', { test: 'test' });
   });
 });

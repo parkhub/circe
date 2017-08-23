@@ -18,5 +18,7 @@ type ProducerCfgs = {
 };
 
 type ProducerAPI = {|
-  publishEvent: PublishCfgs => void
+  publishEvent: PublishCfgs => void,
+  disconnect: () => Promise<void>,
+  addListener: any => void
 |};

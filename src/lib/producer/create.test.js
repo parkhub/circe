@@ -123,3 +123,39 @@ test('Should throw if message is missing when publishing', async () => {
   expect(() => producer.publishEvent()).toThrow();
   expect(() => producer.publishEvent({ message: 'TestTopic' })).toThrow();
 });
+
+describe('.disconnect()', () => {
+  test('Should call disconnect from base library', async () => {
+    const producerCfgs = {
+      connection: 'kafka:123',
+      groupId: 'one',
+      baseLibCfg: 'test',
+      topicCfgs: {
+        topicCfg: 'test-topic-cfg'
+      }
+    };
+    const producer = await createProducer(producerCfgs);
+
+    await producer.disconnect();
+    expect(kafka.producerDisconnect).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('.addListener', () => {
+  test('Should add a listener to base library', async () => {
+    const producerCfgs = {
+      connection: 'kafka:123',
+      groupId: 'one',
+      baseLibCfg: 'test',
+      topicCfgs: {
+        topicCfg: 'test-topic-cfg'
+      }
+    };
+    const producer = await createProducer(producerCfgs);
+
+    const kafkaInstance = kafka.Producer.mock.instances[0];
+    kafkaInstance.on = jest.fn();
+    producer.addListener('hello', 'hi', { test: 'test' });
+    expect(kafkaInstance.on).toHaveBeenCalledWith('hello', 'hi', { test: 'test' });
+  });
+});

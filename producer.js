@@ -1,7 +1,7 @@
 const kafka = require('node-rdkafka');
 
 const producer = new kafka.Producer({
-  'metadata.broker.list': 'localhost:9092',
+  'metadata.broker.list': 'circe-kafka:9092',
   'broker.version.fallback': '0.10.0', // If kafka node doesn't have API, use this instead
   'api.version.request': true // Request the api version of Kafka node
 });

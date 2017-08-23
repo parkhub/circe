@@ -171,3 +171,20 @@ describe('.subscribe', () => {
     expect(() => kafka.KafkaConsumer.mock.instances[0].triggerEvent(topic, triggerMsg)).toThrow();
   });
 });
+
+describe('.disconnect()', () => {
+  test('Should call disconnect from base plugin', async () => {
+    const consumerCfgs = {
+      connection: 'kafka:123',
+      groupId: 'one',
+      baseLibCfg: 'test',
+      topicCfgs: {
+        topicCfg: 'test-topic-cfg'
+      }
+    };
+    const consumer = await create(consumerCfgs);
+
+    await consumer.disconnect();
+    expect(kafka.consumerDisconnect).toHaveBeenCalledTimes(1);
+  });
+});

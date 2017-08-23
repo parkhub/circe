@@ -1,11 +1,42 @@
 import circe from '../src';
 
-describe('circe() API', () => {
-  test('Should create a new circe instance', () => {
-    expect(circe.createProducer).toBeDefined();
-    expect(typeof circe.createProducer).toBe('function');
+jest.unmock('node-rdkafka');
 
-    expect(circe.createConsumer).toBeDefined();
-    expect(typeof circe.createConsumer).toBe('function');
+test('Should produce and consume a simple setup', async () => {
+  expect.assertions(1);
+
+  const topic = 'SIMPLE_TEST_TOPIC';
+  const connection = 'circe-kafka:9092';
+  const groupId = 'integration-consumer-test';
+  const testMessage = {
+    test: 'message'
+  };
+
+  const consumer = await circe.createConsumer({
+    connection,
+    groupId
   });
+
+  const producer = await circe.createProducer({
+    connection
+  });
+
+  const handler = (data) => {
+    console.log('data', data);
+    expect(data).toEqual({
+      topic,
+      message: testMessage
+    });
+  };
+
+  consumer.subscribe(topic, handler);
+
+  try {
+    producer.publishEvent({
+      topic,
+      message: testMessage
+    });
+  } catch (e) {
+    console.log(e);
+  }
 });

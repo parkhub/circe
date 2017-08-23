@@ -1,12 +1,8 @@
 const kafka = require('node-rdkafka');
-const SegfaultHandler = require('segfault-handler');
-//
-//
-SegfaultHandler.registerHandler('crash.log'); // With no argument, SegfaultHandler will generate a generic log file name
 
 const consumer = new kafka.KafkaConsumer({
   'group.id': 'consumer',
-  'metadata.broker.list': 'localhost:9092',
+  'metadata.broker.list': 'circe-kafka:9092',
   event_cb: true
 });
 

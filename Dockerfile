@@ -1,11 +1,11 @@
-FROM node:8-alpine AS base
+FROM node:8.4-alpine 
 LABEL maintainer Daniel Olivares "daniel.olivares@parkhub.com"
 
 RUN apk add --update --upgrade --no-cache git
 RUN mkdir /npm-module
 WORKDIR /npm-module
 
-RUN apk --update --upgrade add --virtual build-deps \
+RUN apk --update --upgrade add \
   cyrus-sasl-dev \
   make \
   gcc \
@@ -14,31 +14,16 @@ RUN apk --update --upgrade add --virtual build-deps \
   python \
   libressl2.5-libcrypto \
   libc6-compat \
-  libressl2.5-libssl 
+  libressl2.5-libssl \
+  librdkafka-dev=0.9.5-r0
 
-RUN apk add --update --upgrade --no-cache tini 
-RUN apk add --update --upgrade --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/community/ --allow-untrusted librdkafka-dev
+# RUN apk add --update --upgrade --no-cache tini 
+# RUN apk add --update --upgrade --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/community/ --allow-untrusted librdkafka-dev
 ENV WITH_SASL 0
 ENV BUILD_LIBRDKAFKA 0
 
-# RUN apk add --update --upgrade --no-cache \
-#   make \
-#   gcc \
-#   g++ \
-#   bash \
-#   python \
-#   libressl2.5-libcrypto \
-#   libressl2.5-libssl \
-#   cyrus-sasl-dev \
-#   zlib \
-#   libsasl \
-#   openssl-dev \
-#   libc6-compat 
-#
-COPY package.json .
+COPY package.json package-lock.json ./
 
 RUN npm install 
 
 COPY . .
-
-RUN rm -rf /tmp/*

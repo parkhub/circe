@@ -1,19 +1,38 @@
 version: '3'
 services: 
+  circe:
+    build: .
+    command: ["npm", "start", "test.integration"]
+    volumes:
+      - ./:/npm-module
+      - /npm-module/node_modules
+    links:
+      - kafka
   zookeeper:
-    image: wurstmeister/zookeeper
+    image: quay.io/parkhubprime/pk-ubuntu-zookeeper:0.1.0
+    hostname: zookeeper-0
     ports:
       - 2181:2181
+      - 2888:2888
+      - 3888:3888
+    environment:
+      ZK_REPLICAS: 1
+      ZK_CLIENT_PORT: 2181
+      ZK_SERVER_PORT: 2888
+      ZK_ELECTION_PORT: 3888
   kafka:
-    image: wurstmeister/kafka:0.11.0.0
+    image: quay.io/parkhubprime/pk-ubuntu-kafka:0.1.0
     hostname: kafka
+    container_name: 'circe-kafka'
+    depends_on:
+      - zookeeper
     ports:
       - 9092:9092
-    links:
-      - zookeeper
+      - 9999:9999
+    env_file:
+      - kafka.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kafka/data:/kafka
     environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_CREATE_TOPICS: "test2:1:3,test:1:1,test3:1:1,test4:1:1,test5:1:1,test6:1:1"
-      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
-      KAFKA_ADVERTISED_PORT: 9092
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'

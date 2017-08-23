@@ -42,7 +42,15 @@ export default async function create({
       const wrappedEvent = Array.isArray(topic) ? topic : [topic];
       const wrappedHandler = createHandler(handler, applyMiddleware);
 
-      consumer.subscribe(wrappedEvent, wrappedHandler);
+      consumer.subscribe(wrappedEvent);
+      consumer.consume();
+
+      consumer.on('data', wrappedHandler);
+    },
+    disconnect() {
+      consumer.disconnect();
+
+      return pEvent(consumer, 'disconnected');
     }
   };
 }

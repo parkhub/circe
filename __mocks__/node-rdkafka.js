@@ -49,13 +49,8 @@ KafkaConsumer.prototype.connect = consumerConnect;
 KafkaConsumer.prototype.consume = consume;
 KafkaConsumer.prototype.subscribe = subscribe;
 KafkaConsumer.prototype.unsubscribe = unsubscribe;
-KafkaConsumer.prototype.triggerEvent = jest.fn(function triggerEvent(
-  eventToTrigger,
-  argsForHandler
-) {
-  const eventHandler = this.events[eventToTrigger];
-
-  eventHandler(argsForHandler);
+KafkaConsumer.prototype.triggerEvent = jest.fn(function triggerEvent(...args) {
+  this.emit('data', ...args);
 });
 
 util.inherits(KafkaConsumer, event.EventEmitter);

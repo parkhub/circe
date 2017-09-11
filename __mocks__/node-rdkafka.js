@@ -69,3 +69,13 @@ const nodeRdkafka = {
 };
 
 export default nodeRdkafka;
+
+const createProducer = jest.fn();
+const createConsumer = jest.fn();
+
+const circe = jest.fn(() => {
+  return {
+    createProducer,
+    createConsumer
+  }
+})

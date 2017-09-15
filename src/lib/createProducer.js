@@ -2,17 +2,18 @@
 
 import kafka from 'node-rdkafka';
 import pEvent from 'p-event';
-import middleware from '@parkhub/circe-middleware';
+import circeMiddleware from '@parkhub/circe-middleware';
+import checkParamsMiddleware from './middleware/checkParamsMiddleware';
+import kafkaMessageToBufferMiddleware from './middleware/kafkaMessageToBufferMiddleware';
+import timestampMiddleware from './middleware/timestampMiddleware';
 
-function formatKafkaMessage(message: Message): Buffer {
-  if (message !== null && typeof message === 'object') {
-    return Buffer.from(JSON.stringify(message));
-  }
+const publishMiddlewares = [
+  checkParamsMiddleware,
+  kafkaMessageToBufferMiddleware,
+  timestampMiddleware
+];
 
-  return Buffer.from(message);
-}
-
-export default async function createProducer({ connection, middlewares = [], ...producerCfgs }) {
+export default async function createProducer({ connection, globalCfgs = {} }) {
   if (!connection) {
     throw new Error('connection is required');
   }
@@ -23,32 +24,25 @@ export default async function createProducer({ connection, middlewares = [], ...
     'api.version.request': true // Request the api version of Kafka node
   };
 
-  const producer = new kafka.Producer({ ...defaultCfgs, ...producerCfgs });
+  const producer = new kafka.Producer({ ...defaultCfgs, ...globalCfgs });
 
   producer.connect();
 
   await pEvent(producer, 'ready');
 
-  const publishToKafka = ({
-    topic, message, partition, timeStamp, opaqueToken, key
-  }) => {
-    if (!topic || !message) {
-      const missingProp = !topic ? 'topic' : 'message';
-
-      throw new Error(`${missingProp} is required`);
-    }
-
-    const formattedMessage: Buffer = formatKafkaMessage(message);
-    const ts: number = timeStamp || Date.now();
-
-    producer.produce(topic, partition, formattedMessage, key, ts, opaqueToken);
-  };
-
-  const applyMiddlewareAndPublish = middleware([...middlewares, publishToKafka]);
+  const producerMiddleware = circeMiddleware(publishMiddlewares);
 
   return {
-    publishEvent(publishCfgs) {
-      return applyMiddlewareAndPublish(publishCfgs);
+    publish({ publishCfgs, middleware = [] }) {
+      middleware.forEach(ware => producerMiddleware.use(ware));
+
+      producerMiddleware.run(publishCfgs, (finalPublishCfgs) => {
+        const {
+          topic, message, partition, timestamp, opaqueToken, key
+        } = finalPublishCfgs;
+
+        producer.produce(topic, partition, message, key, timestamp, opaqueToken);
+      });
     },
     disconnect() {
       producer.disconnect();

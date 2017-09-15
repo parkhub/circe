@@ -6,8 +6,8 @@
  * @author Daniel Olivares
  */
 
-import producer from './lib/producer';
-import consumer from './lib/consumer';
+import createProducer from './lib/createProducer';
+import createConsumer from './lib/createConsumer';
 
 /* TODOS
  * TODO UPDATE DOCS
@@ -15,14 +15,9 @@ import consumer from './lib/consumer';
  * TODO Improve DOCS by adding examples etc
 */
 
-type CirceAPI = {|
-  createProducer: ProducerCfgs => Promise<ProducerAPI>,
-  createConsumer: ConsumerCfgs => Promise<ConsumerAPI>
-|};
-
-const circe: CirceAPI = {
-  createProducer: producer,
-  createConsumer: consumer
+const circe = {
+  createProducer,
+  createConsumer
 };
 
 export default circe;

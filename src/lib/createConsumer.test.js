@@ -1,14 +1,20 @@
 import kafka from 'node-rdkafka';
+import circeMiddleware from '@parkhub/circe-middleware';
 import createConsumer from './createConsumer';
-// import middleware from '../middleware';
 
 jest.mock('node-rdkafka');
-// jest.mock('./createHandler');
-// jest.mock('../middleware');
+jest.mock('@parkhub/circe-middleware');
+jest.mock('./middleware/parseBuffersMiddleware');
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
+
+const baseConsumer = () =>
+  createConsumer({
+    connection: 'kafka',
+    groupId: 'test'
+  });
 
 test('Should throw if connection is not passed', async () => {
   const err = new Error('connection is required');
@@ -20,328 +26,59 @@ test('Should throw if groupId is not passed', async () => {
   await expect(createConsumer({ connection: 'test' })).rejects.toEqual(err);
 });
 
-test('Should create a new consumer', async () => {
-  const consumer = await createConsumer({ connection: 'fake123', groupId: 'one' });
-
-  expect(consumer.subscribe).toBeDefined();
-  expect(typeof consumer.subscribe).toBe('function');
-});
-
 describe('.subscribe', () => {
-  test('Should return the JS object from a JSON string', async () => {
-    const topic = 'TEST';
-    const expectedTriggerMessage = {
-      test: 'test'
-    };
-    const triggerMsg = {
-      topic,
-      value: Buffer.from(JSON.stringify(expectedTriggerMessage))
-    };
-    const middlewareFn = jest.fn(args => args);
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      middlewares: [middlewareFn],
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
+  test('Should throw if topic is not a parameter', async () => {
+    const consumer = await baseConsumer();
+    const expectedError = new Error('topic is required');
+
+    expect(() => consumer.subscribe({ handler: jest.fn() })).toThrow(expectedError);
+  });
+
+  test('Should throw if handler is not a parameter', async () => {
+    const consumer = await baseConsumer();
+    const expectedError = new Error('handler is required');
+
+    expect(() => consumer.subscribe({ topic: 'test' })).toThrow(expectedError);
+  });
+
+  test('Should accept an single topic and convert it to an array', async () => {
+    const consumer = await baseConsumer();
+    const topic = 'test';
+    consumer.subscribe({ topic, handler: jest.fn() });
+
+    const kafkaInstance = kafka.KafkaConsumer.mock.instances[0];
+
+    expect(kafkaInstance.subscribe).toHaveBeenCalledWith([topic]);
+  });
+
+  test('Should subscribe to topic, setup middleware and trigger handler', async () => {
+    const topics = ['TEST', 'TEST_TWO'];
     const handler = jest.fn();
 
-    const handlerCfg = {
-      topic,
-      handler
-    };
+    const consumer = await baseConsumer();
+    const ware = jest.fn();
 
-    const consumer = await createConsumer(consumerCfgs);
-    consumer.subscribe([topic], [handlerCfg]);
+    consumer.subscribe({ topic: topics, handler, middleware: [ware] });
 
-    kafka.KafkaConsumer.mock.instances[0].triggerEvent(triggerMsg);
+    const kafkaInstance = kafka.KafkaConsumer.mock.instances[0];
 
-    expect(middlewareFn).toHaveBeenCalledWith({ topic, message: expectedTriggerMessage });
-    expect(handler).toHaveBeenCalledWith({ topic, message: expectedTriggerMessage });
-  });
+    // eslint-disable-next-line no-underscore-dangle
+    const circeInstance = circeMiddleware.__mock__;
 
-  test('Should take a handler configuration array', async () => {
-    const topic = 'TEST';
-    const expectedTriggerMessage = 'value';
-    const triggerMsg = {
-      topic,
-      value: Buffer.from(expectedTriggerMessage)
-    };
-    const middlewareFn = jest.fn(args => args);
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      middlewares: [middlewareFn],
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const handler = jest.fn();
+    expect(circeMiddleware).toHaveBeenCalledTimes(1);
+    expect(circeInstance.use).toHaveBeenCalledTimes(1);
+    expect(kafkaInstance.subscribe).toHaveBeenCalledWith(topics);
+    expect(kafkaInstance.consume).toHaveBeenCalledTimes(1);
 
-    const handlerCfg = {
-      topic,
-      handler
-    };
+    kafkaInstance.triggerTopic();
 
-    const consumer = await createConsumer(consumerCfgs);
-    consumer.subscribe([topic], [handlerCfg]);
-
-    kafka.KafkaConsumer.mock.instances[0].triggerEvent(triggerMsg);
-
-    expect(middlewareFn).toHaveBeenCalledWith({ topic, message: expectedTriggerMessage });
-    expect(handler).toHaveBeenCalledWith({ topic, message: expectedTriggerMessage });
-  });
-
-  test('Should apply middlewares', async () => {
-    const topic = 'TEST';
-    const expectedTriggerMessage = 'value';
-    const triggerMsg = {
-      topic,
-      value: Buffer.from(expectedTriggerMessage)
-    };
-    const middlewareFn = jest.fn(args => args);
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      middlewares: [middlewareFn],
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const handler = jest.fn();
-
-    const consumer = await createConsumer(consumerCfgs);
-    const expectedConsCfgs = {
-      'metadata.broker.list': 'kafka:123',
-      'group.id': 'one',
-      baseLibCfg: 'test'
-    };
-    const expectedTopicCfgs = {
-      topicCfg: 'test-topic-cfg'
-    };
-
-    expect(kafka.KafkaConsumer).toHaveBeenCalledWith(expectedConsCfgs, expectedTopicCfgs);
-    const topics = [topic];
-
-    consumer.subscribe(topics, handler);
-    expect(kafka.subscribe).toHaveBeenCalledTimes(1);
-
-    kafka.KafkaConsumer.mock.instances[0].triggerEvent(triggerMsg);
-
-    expect(middlewareFn).toHaveBeenCalledWith({ topic, message: expectedTriggerMessage });
-    expect(handler).toHaveBeenCalledWith({ topic, message: expectedTriggerMessage });
-  });
-
-  test('Should throw if no configs are passed to subscribe', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
-
-    expect(() => consumer.subscribe()).toThrow();
-  });
-
-  test('Should throw if missing topic when subscribing to a topic', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const handler = jest.fn();
-
-    const consumer = await createConsumer(consumerCfgs);
-    const noTopicCfgs = {
-      handler
-    };
-
-    expect(() => consumer.subscribe(noTopicCfgs)).toThrow();
-  });
-
-  test('Should throw if missing handler when subscribing to a topic', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-
-    const consumer = await createConsumer(consumerCfgs);
-    const noHandlerCfgs = {
-      topic: 'test'
-    };
-
-    expect(() => consumer.subscribe(noHandlerCfgs)).toThrow();
-  });
-
-  test('Should subscribe to a topic', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const handler = jest.fn();
-
-    const consumer = await createConsumer(consumerCfgs);
-    const expectedConsCfgs = {
-      'metadata.broker.list': 'kafka:123',
-      'group.id': 'one',
-      baseLibCfg: 'test'
-    };
-    const expectedTopicCfgs = {
-      topicCfg: 'test-topic-cfg'
-    };
-
-    expect(kafka.KafkaConsumer).toHaveBeenCalledWith(expectedConsCfgs, expectedTopicCfgs);
-    const topic = ['TEST'];
-
-    consumer.subscribe(topic, handler);
-    expect(kafka.subscribe).toHaveBeenCalledTimes(1);
-  });
-
-  test('Should accept an array for topic cfg', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const handler = jest.fn();
-
-    const consumer = await createConsumer(consumerCfgs);
-    const multipleTopics = ['TEST_EVENT', 'ANOTHER_ONE'];
-
-    consumer.subscribe(multipleTopics, handler);
-    const multipleTopicArgs = kafka.subscribe.mock.calls[0][0];
-
-    expect(multipleTopicArgs).toEqual(multipleTopics);
-  });
-
-  test('Should accept a single topic into one for topic cfg', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const topic = 'TEST_EVENT';
-    const handler = jest.fn();
-
-    const consumer = await createConsumer(consumerCfgs);
-
-    consumer.subscribe(topic, handler);
-    const oneTopicArg = kafka.subscribe.mock.calls[0][0];
-
-    expect(oneTopicArg).toEqual([topic]);
-  });
-
-  test('Should throw if create handler throws', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
-
-    const topic = 'TEST_EVENT';
-    const handlers = 'THROW';
-
-    expect(() => consumer.subscribe(topic, handlers)).toThrow();
-  });
-
-  test('Should throw if there is no handler for the topic', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
-
-    const topic = 'TEST_EVENT';
-    const handlerCfgs = {
-      topic: 'SOME_OTHER_EVENT',
-      handler() {}
-    };
-
-    consumer.subscribe(topic, [handlerCfgs]);
-
-    const message = 'trigger message';
-    const triggerMsg = {
-      topic,
-      value: Buffer.from(message),
-      partition: 1
-    };
-
-    expect(() => kafka.KafkaConsumer.mock.instances[0].triggerEvent(topic, triggerMsg)).toThrow();
-  });
-
-  test('Should throw if handler throws', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
-
-    const topic = 'TEST_EVENT';
-    const handler = () => {
-      throw new Error('ERR');
-    };
-
-    consumer.subscribe(topic, handler);
-
-    const message = 'trigger message';
-    const triggerMsg = {
-      topic,
-      value: Buffer.from(message),
-      partition: 1
-    };
-
-    expect(() => kafka.KafkaConsumer.mock.instances[0].triggerEvent(topic, triggerMsg)).toThrow();
+    expect(circeInstance.run).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('.disconnect()', () => {
-  test('Should call disconnect from base library', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
+  test('Should call disconnect from consumer', async () => {
+    const consumer = await baseConsumer();
 
     await consumer.disconnect();
     expect(kafka.consumerDisconnect).toHaveBeenCalledTimes(1);
@@ -349,16 +86,8 @@ describe('.disconnect()', () => {
 });
 
 describe('.unsubscribe()', () => {
-  test('Should call unsubscribe from base library', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
+  test('Should call unsubscribe from consumer', async () => {
+    const consumer = await baseConsumer();
 
     consumer.unsubscribe();
     expect(kafka.unsubscribe).toHaveBeenCalledTimes(1);
@@ -366,20 +95,14 @@ describe('.unsubscribe()', () => {
 });
 
 describe('.addListener', () => {
-  test('Should add a listener to base library', async () => {
-    const consumerCfgs = {
-      connection: 'kafka:123',
-      groupId: 'one',
-      baseLibCfg: 'test',
-      topicCfgs: {
-        topicCfg: 'test-topic-cfg'
-      }
-    };
-    const consumer = await createConsumer(consumerCfgs);
+  test('Should add a listener to consumer', async () => {
+    const consumer = await baseConsumer();
 
+    const handler = jest.fn();
     const kafkaInstance = kafka.KafkaConsumer.mock.instances[0];
     kafkaInstance.on = jest.fn();
-    consumer.addListener('hello', 'hi', { test: 'test' });
-    expect(kafkaInstance.on).toHaveBeenCalledWith('hello', 'hi', { test: 'test' });
+
+    consumer.addListener('hello', handler);
+    expect(kafkaInstance.on).toHaveBeenCalledWith('hello', handler);
   });
 });

@@ -10,7 +10,7 @@
     }
   },
   "testMatch": [
-    "**/__tests__/circe.test.js"
+    "**/__tests__/*.test.js"
   ],
   "modulePathIgnorePatterns": [
     "dist/*"

@@ -49,7 +49,7 @@ KafkaConsumer.prototype.connect = consumerConnect;
 KafkaConsumer.prototype.consume = consume;
 KafkaConsumer.prototype.subscribe = subscribe;
 KafkaConsumer.prototype.unsubscribe = unsubscribe;
-KafkaConsumer.prototype.triggerEvent = jest.fn(function triggerEvent(...args) {
+KafkaConsumer.prototype.triggerTopic = jest.fn(function triggerTopic(...args) {
   this.emit('data', ...args);
 });
 
@@ -69,13 +69,3 @@ const nodeRdkafka = {
 };
 
 export default nodeRdkafka;
-
-const createProducer = jest.fn();
-const createConsumer = jest.fn();
-
-const circe = jest.fn(() => {
-  return {
-    createProducer,
-    createConsumer
-  }
-})

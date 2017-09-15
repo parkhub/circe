@@ -1,12 +1,12 @@
 import kafka from 'node-rdkafka';
+import circeMiddleware from '@parkhub/circe-middleware';
 import createProducer from './createProducer';
-// import middleware from '@parkhub/circe-middleware';
 
 jest.mock('node-rdkafka');
-// jest.mock('@parkhub/circe-middleware');
-
-// const applyMidware = jest.fn(data => data);
-// middleware.mockImplementation(() => applyMidware);
+jest.mock('@parkhub/circe-middleware');
+jest.mock('./middleware/checkParamsMiddleware');
+jest.mock('./middleware/kafkaMessageToBufferMiddleware');
+jest.mock('./middleware/timestampMiddleware.js');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -22,88 +22,109 @@ test('Should reject if connection is not passed in', async () => {
   await expect(createProducer({})).rejects.toEqual(new Error(expectedErrMsg));
 });
 
-test('Should create a new producer', async () => {
-  const producer = await createProducer({ connection: 'fake:123' });
-
-  expect(producer.publishEvent).toBeDefined();
-  expect(typeof producer.publishEvent).toBe('function');
-});
-
-test('Should publish an event', async () => {
-  const testTopic = 'TestTopic';
-  const testMsgString = 'test msg string';
-  const testKey = 'test-key';
-  const testMsgObj = {
-    test: 'string'
+test('Should create a producer with custom configurations', async () => {
+  const connection = 'connection';
+  const globalCfgs = {
+    test: 'global'
   };
-  const producer = await createProducer({ connection: 'fake:123' });
 
-  producer.publishEvent({ topic: testTopic, message: testMsgString, key: testKey });
-  producer.publishEvent({ topic: testTopic, message: testMsgObj });
+  await createProducer({ connection, globalCfgs });
 
-  expect(kafka.produce).toHaveBeenCalledTimes(2);
-  const msgStringCall = kafka.produce.mock.calls[0];
-  const testMsgObjCall = kafka.produce.mock.calls[1];
-  // const [topic, partition, msgBuf, key, timestamp, token] = kafka.produce.mock.calls[0];
+  expect(circeMiddleware).toHaveBeenCalledTimes(1);
+  const expectedCall = {
+    'metadata.broker.list': connection,
+    'broker.version.fallback': '0.10.0', // If kafka node doesn't have API, use this instead
+    'api.version.request': true, // Request the api version of Kafka node
+    test: 'global'
+  };
 
-  expect(msgStringCall[0]).toBe(testTopic);
-  expect(msgStringCall[1]).toBeUndefined();
-  expect(msgStringCall[2].toString()).toEqual(testMsgString);
-  expect(msgStringCall[3]).toBe(testKey);
-  expect(msgStringCall[4]).toBeDefined();
-  expect(msgStringCall[5]).toBeUndefined();
-
-  expect(testMsgObjCall[0]).toBe(testTopic);
-  expect(testMsgObjCall[1]).toBeUndefined();
-  expect(JSON.parse(testMsgObjCall[2].toString())).toEqual(testMsgObj);
-  expect(testMsgObjCall[3]).toBeUndefined();
-  expect(testMsgObjCall[4]).toBeDefined();
-  expect(testMsgObjCall[5]).toBeUndefined();
+  expect(kafka.Producer).toHaveBeenCalledWith(expectedCall);
 });
 
-// test('Should create middleware function', async () => {
-//   const testTopic = 'TestTopic';
-//   const testMsgString = 'TESTFORMATRETURN';
-//   const testKey = 'test-key';
-//   const middlewareCfgs = {
-//     test: 'test'
-//   };
-//
-//   const producer = await createProducer({
-//     connection: 'fake:123',
-//     middleware: middlewareCfgs
-//   });
-//
-//   producer.publishEvent({ topic: testTopic, message: testMsgString, key: testKey });
-//
-//   expect(middleware).toHaveBeenCalledWith(middlewareCfgs);
-//   expect(applyMidware).toHaveBeenCalledWith({
-//     topic: testTopic,
-//     message: testMsgString,
-//     key: testKey
-//   });
-//   expect(formatKafkaMessage).toHaveBeenCalledWith(testMsgString);
-//   const kafkaProduceCall = kafka.produce.mock.calls[0];
-//   expect(kafkaProduceCall[0]).toBe(testTopic);
-//   expect(kafkaProduceCall[1]).toBeUndefined();
-//   expect(JSON.parse(kafkaProduceCall[2].toString())).toEqual({ test: 'TESTFORMATRETURN' });
-//   expect(kafkaProduceCall[3]).toBe(testKey);
-//   expect(kafkaProduceCall[4]).toBeDefined();
-//   expect(kafkaProduceCall[5]).toBeUndefined();
-// });
+describe('.publish', () => {
+  const baseProducer = () => createProducer({ connection: 'test' });
 
-test('Should throw if topic is missing when publishing', async () => {
-  const producer = await createProducer({ connection: 'fake:123' });
+  test('Should publish an event w/no middlewares', async () => {
+    const producer = await baseProducer();
 
-  expect(() => producer.publishEvent()).toThrow();
-  expect(() => producer.publishEvent({ topic: 'TestTopic' })).toThrow();
-});
+    const topic = 'test';
+    const message = 'test';
+    const key = 'key';
+    const opaqueToken = 'token';
+    const timestamp = 'timestamp';
+    const partition = 'partition';
 
-test('Should throw if message is missing when publishing', async () => {
-  const producer = await createProducer({ connection: 'fake:123' });
+    const publishCfgs = {
+      topic,
+      message,
+      key,
+      opaqueToken,
+      timestamp,
+      partition
+    };
 
-  expect(() => producer.publishEvent()).toThrow();
-  expect(() => producer.publishEvent({ message: 'TestTopic' })).toThrow();
+    producer.publish({ publishCfgs });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const middlewareInstance = circeMiddleware.__mock__;
+    const runCall = middlewareInstance.run.mock.calls[0];
+
+    expect(middlewareInstance.use).toHaveBeenCalledTimes(0);
+    // Check the configs
+    expect(runCall[0]).toEqual(publishCfgs);
+
+    // Execute Fn
+    runCall[1](publishCfgs);
+    const produceCall = kafka.Producer.mock.instances[0].produce.mock.calls[0];
+
+    expect(produceCall[0]).toBe(topic);
+    expect(produceCall[1]).toBe(partition);
+    expect(produceCall[2]).toBe(message);
+    expect(produceCall[3]).toBe(key);
+    expect(produceCall[4]).toBe(timestamp);
+    expect(produceCall[5]).toBe(opaqueToken);
+  });
+  test('Should publish an event', async () => {
+    const producer = await baseProducer();
+
+    const topic = 'test';
+    const message = 'test';
+    const key = 'key';
+    const opaqueToken = 'token';
+    const timestamp = 'timestamp';
+    const partition = 'partition';
+    const middleware = [jest.fn()];
+
+    const publishCfgs = {
+      topic,
+      message,
+      key,
+      opaqueToken,
+      timestamp,
+      partition
+    };
+
+    producer.publish({ publishCfgs, middleware });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const middlewareInstance = circeMiddleware.__mock__;
+    const runCall = middlewareInstance.run.mock.calls[0];
+
+    expect(middlewareInstance.use).toHaveBeenCalledTimes(1);
+    // Check the configs
+    expect(runCall[0]).toEqual(publishCfgs);
+
+    // Execute Fn
+    runCall[1](publishCfgs);
+    const produceCall = kafka.Producer.mock.instances[0].produce.mock.calls[0];
+
+    expect(produceCall[0]).toBe(topic);
+    expect(produceCall[1]).toBe(partition);
+    expect(produceCall[2]).toBe(message);
+    expect(produceCall[3]).toBe(key);
+    expect(produceCall[4]).toBe(timestamp);
+    expect(produceCall[5]).toBe(opaqueToken);
+  });
 });
 
 describe('.disconnect()', () => {

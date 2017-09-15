@@ -1,11 +1,10 @@
 version: '3'
 services: 
-  circe:
+  circe-integration-test:
     build: .
     command: ["npm", "start", "test.integration"]
     volumes:
       - ./:/npm-module
-      - /npm-module/node_modules
     links:
       - kafka
   zookeeper:
@@ -23,7 +22,6 @@ services:
   kafka:
     image: quay.io/parkhubprime/pk-ubuntu-kafka:0.1.0
     hostname: kafka
-    container_name: 'circe-kafka'
     depends_on:
       - zookeeper
     ports:

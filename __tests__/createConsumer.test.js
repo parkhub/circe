@@ -25,6 +25,37 @@ test('Should disconnect a consumer', async () => {
 });
 
 test(
+  'Should subscribe to an array of topics',
+  async (done) => {
+    expect.assertions(2);
+    const consumer = await baseConsumer();
+    const producer = await createProducer();
+
+    runningClients.push(consumer);
+    runningClients.push(producer);
+
+    const topics = ['ARRAY_TOPIC', 'ARRAY_TOPIC_TWO'];
+    const called = [];
+    const handler = jest.fn((data) => {
+      called.push(data.topic);
+
+      if (called.length === 2) {
+        expect(called).toEqual(topics);
+        expect(handler).toHaveBeenCalledTimes(2);
+        done();
+      }
+    });
+
+    consumer.subscribe({ topic: topics });
+    consumer.consume({ handler });
+
+    producer.produce('ARRAY_TOPIC', null, Buffer.from('test'));
+    producer.produce('ARRAY_TOPIC_TWO', null, Buffer.from('test'));
+  },
+  10000
+);
+
+test(
   'Should unsubscribe a consumer',
   async (done) => {
     expect.assertions(1);
@@ -36,24 +67,40 @@ test(
     runningClients.push(producer);
 
     const topic = 'TEST_TOPIC_UNSUBSCRIBE';
-    const anotherTopic = 'ANOTHER_TEST_TOPIC';
-    const testTopicHandler = jest.fn();
+    const otherTopic = 'OTHER_TOPIC';
+    const testTopicHandler = jest.fn((data) => {
+      expect(data.topic).toBe(otherTopic);
+      done();
+    });
 
-    const anotherTopicHandler = jest.fn(() => {
-      expect(anotherTopicHandler).toHaveBeenCalledTimes(1);
-      expect(testTopicHandler).not.toHaveBeenCalled();
+    consumer.subscribe({ topic });
+    consumer.consume({ handler: testTopicHandler });
+
+    consumer.unsubscribe();
+    consumer.subscribe({ topic: otherTopic });
+
+    producer.produce(otherTopic, null, Buffer.from('test'));
+  },
+  100000
+);
+
+test(
+  'Should add a new listener to consumer',
+  async (done) => {
+    expect.assertions(1);
+    const consumer = await baseConsumer();
+
+    const disconnectedListener = jest.fn(() => {
+      expect(disconnectedListener).toHaveBeenCalledTimes(1);
 
       done();
     });
 
-    consumer.subscribe({ topic, handler: testTopicHandler });
+    consumer.addListener('disconnected', disconnectedListener);
 
-    consumer.unsubscribe();
-    consumer.subscribe({ topic: anotherTopic, handler: anotherTopicHandler });
-
-    producer.produce(anotherTopic, null, Buffer.from('test'));
+    consumer.disconnect();
   },
-  100000
+  10000
 );
 
 test('Should fail when subscribe is called without a topic', async () => {
@@ -62,16 +109,18 @@ test('Should fail when subscribe is called without a topic', async () => {
   runningClients.push(consumer);
 
   const expectedErr = new Error('topic is required');
-  expect(() => consumer.subscribe({ handler: jest.fn() })).toThrow(expectedErr);
+  expect(() => consumer.subscribe({})).toThrow(expectedErr);
 });
 
-test('Should fail when subscribe is called without a handler', async () => {
+test('Should fail when consume is called without a handler', async () => {
   const consumer = await baseConsumer();
 
   runningClients.push(consumer);
 
   const expectedErr = new Error('handler is required');
-  expect(() => consumer.subscribe({ topic: 'test' })).toThrow(expectedErr);
+  consumer.subscribe({ topic: 'topic' });
+
+  expect(() => consumer.consume({})).toThrow(expectedErr);
 });
 
 test('Should throw if connection is not passed', async () => {

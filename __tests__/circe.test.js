@@ -10,7 +10,7 @@ afterAll(async () => {
 });
 
 test('Should produce and consume an object message', async (done) => {
-  expect.assertions(1);
+  expect.assertions(3);
 
   const topic = 'SIMPLE_TEST_TOPIC';
   const testKey = 'test_key';
@@ -32,7 +32,18 @@ test('Should produce and consume an object message', async (done) => {
 
   runningClients.push(producer);
 
+  consumer.subscribe({ topic });
+  const middleware = jest.fn((value, next) => {
+    next(value);
+  });
+
+  const middlewareProducer = jest.fn((value, next) => {
+    next(value);
+  });
+
   const handler = (data) => {
+    expect(middleware).toHaveBeenCalledTimes(1);
+    expect(middlewareProducer).toHaveBeenCalledTimes(1);
     expect(data).toMatchObject({
       topic,
       key: testKey,
@@ -42,14 +53,15 @@ test('Should produce and consume an object message', async (done) => {
     done();
   };
 
-  consumer.subscribe({ topic, handler });
+  consumer.consume({ handler, middleware: [middleware] });
 
   producer.publish({
     publishCfgs: {
       topic,
       key: testKey,
       message: testMessage
-    }
+    },
+    middleware: [middlewareProducer]
   });
 });
 
@@ -84,7 +96,8 @@ test('Should produce and consume a string message', async (done) => {
     done();
   };
 
-  consumer.subscribe({ topic, handler });
+  consumer.subscribe({ topic });
+  consumer.consume({ handler });
 
   producer.publish({
     publishCfgs: {

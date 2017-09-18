@@ -17,6 +17,7 @@
   ],
   "coveragePathIgnorePatterns": [
     "/node_modules/",
-    "/dist/"
+    "/dist/",
+    "/fixtures/"
   ]
 }

@@ -34,13 +34,6 @@ describe('.subscribe', () => {
     expect(() => consumer.subscribe({ handler: jest.fn() })).toThrow(expectedError);
   });
 
-  test('Should throw if handler is not a parameter', async () => {
-    const consumer = await baseConsumer();
-    const expectedError = new Error('handler is required');
-
-    expect(() => consumer.subscribe({ topic: 'test' })).toThrow(expectedError);
-  });
-
   test('Should accept an single topic and convert it to an array', async () => {
     const consumer = await baseConsumer();
     const topic = 'test';
@@ -58,7 +51,8 @@ describe('.subscribe', () => {
     const consumer = await baseConsumer();
     const ware = jest.fn();
 
-    consumer.subscribe({ topic: topics, handler, middleware: [ware] });
+    consumer.subscribe({ topic: topics });
+    consumer.consume({ handler, middleware: [ware] });
 
     const kafkaInstance = kafka.KafkaConsumer.mock.instances[0];
 
@@ -76,6 +70,15 @@ describe('.subscribe', () => {
   });
 });
 
+describe('.consume()', () => {
+  test('Should throw if handler is not a parameter', async () => {
+    const consumer = await baseConsumer();
+    const expectedError = new Error('handler is required');
+    consumer.subscribe({ topic: 'test' });
+
+    expect(() => consumer.consume({})).toThrow(expectedError);
+  });
+});
 describe('.disconnect()', () => {
   test('Should call disconnect from consumer', async () => {
     const consumer = await baseConsumer();

@@ -23,7 +23,8 @@ export default async function createConsumer({
 
   const baseCfgs = {
     'metadata.broker.list': connection,
-    'group.id': groupId
+    'group.id': groupId,
+    event_cb: true
   };
 
   const consumer = new kafka.KafkaConsumer({ ...baseCfgs, ...globalConfigs }, topicCfgs);
@@ -32,17 +33,20 @@ export default async function createConsumer({
 
   await pEvent(consumer, 'ready');
 
-  const consumerMiddleware = circeMiddleware([parseBuffersMiddleware]);
-
   return {
-    subscribe({ topic, handler, middleware = [] }): void {
-      if (!topic || !handler) {
-        const missingProp = !topic ? 'topic' : 'handler';
-
-        throw new Error(`${missingProp} is required`);
+    subscribe({ topic }): void {
+      if (!topic) {
+        throw new Error('topic is required');
       }
 
       consumer.subscribe(arrayify(topic));
+    },
+    consume({ handler, middleware = [] }) {
+      if (!handler) {
+        throw new Error('handler is required');
+      }
+
+      const consumerMiddleware = circeMiddleware([parseBuffersMiddleware]);
       consumer.consume();
 
       middleware.forEach(ware => consumerMiddleware.use(ware));

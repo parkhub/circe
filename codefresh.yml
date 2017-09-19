@@ -27,7 +27,7 @@ steps:
     title: Running Integration Tests
     description: Running integration tests with kafka
     working_directory: /npm-module
-    composition: /npm-module/docker-compose.yml
+    composition: docker-compose.yml
     composition_candidates:
       integration_tests:
         image: ${{BuildDockerImage}}

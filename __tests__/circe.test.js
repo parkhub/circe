@@ -1,163 +1,109 @@
-import consumer from '../src/consumer';
-import producer from '../src/producer';
 import circe from '../src';
 
-beforeEach(() => {
-  jest.clearAllMocks();
+jest.unmock('node-rdkafka');
+jest.unmock('@parkhub/circe-middleware');
+
+const runningClients = [];
+
+afterAll(async () => {
+  await Promise.all(runningClients.map(client => client.disconnect()));
 });
 
-jest.mock('../src/consumer', () =>
-  jest.fn(
-    cfgs =>
-      new Promise((resolve, reject) => {
-        if (!cfgs.validators) {
-          return reject('error');
-        }
+test('Should produce and consume an object message', async (done) => {
+  expect.assertions(3);
 
-        return resolve();
-      })
-  )
-);
+  const topic = 'SIMPLE_TEST_TOPIC';
+  const testKey = 'test_key';
+  const connection = 'kafka:9092';
+  const groupId = 'integration-consumer-test';
+  const testMessage = {
+    test: 'message'
+  };
 
-jest.mock('../src/producer', () =>
-  jest.fn(
-    cfgs =>
-      new Promise((resolve, reject) => {
-        if (!cfgs.validators) {
-          return reject('error');
-        }
-
-        return resolve();
-      })
-  )
-);
-
-describe('circe() API', () => {
-  test('Should reject if no configurations are passed', () => {
-    expect(() => circe()).toThrow();
+  const consumer = await circe.createConsumer({
+    connection,
+    groupId
   });
 
-  test('Should reject if connection is not passed in', () => {
-    const expectedErrMsg = '"connection" configuration is required';
-
-    expect(() => circe({ plugin: {} })).toThrow(new Error(expectedErrMsg));
+  runningClients.push(consumer);
+  const producer = await circe.createProducer({
+    connection
   });
 
-  test('Should reject if plugin is not passed in', () => {
-    const expectedErrMsg = '"plugin" configuration is required';
+  runningClients.push(producer);
 
-    expect(() => circe({ connection: 'conn' })).toThrow(new Error(expectedErrMsg));
+  consumer.subscribe({ topic });
+  const middleware = jest.fn((value, next) => {
+    next(value);
   });
 
-  test('Should return create methods', () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
-
-    const store = circe(cfgs);
-
-    expect(store.createProducer).toBeDefined();
-    expect(typeof store.createProducer).toBe('function');
-
-    expect(store.createConsumer).toBeDefined();
-    expect(typeof store.createConsumer).toBe('function');
-  });
-});
-
-describe('circe().createProducer', () => {
-  test('Should reject if producer from plugin rejects', async () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
-
-    const store = circe(cfgs);
-    expect(store.createProducer()).rejects.toBeDefined();
+  const middlewareProducer = jest.fn((value, next) => {
+    next(value);
   });
 
-  test('Should create a producer from plugin w/o producerCfgs', async () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
+  const handler = (data) => {
+    expect(middleware).toHaveBeenCalledTimes(1);
+    expect(middlewareProducer).toHaveBeenCalledTimes(1);
+    expect(data).toMatchObject({
+      topic,
+      key: testKey,
+      message: testMessage
+    });
 
-    const store = circe(cfgs);
+    done();
+  };
 
-    const producerCfgs = {
-      validators: {}
-    };
+  consumer.consume({ handler, middleware: [middleware] });
 
-    await store.createProducer(producerCfgs);
-
-    expect(producer).toHaveBeenCalledWith({ ...cfgs, ...producerCfgs });
-  });
-
-  test('Should create a producer from plugin', async () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
-
-    const store = circe(cfgs);
-
-    const producerCfgs = {
-      validators: {},
-      pluginCfgs: {
-        test: 'test'
-      }
-    };
-
-    await store.createProducer(producerCfgs);
-
-    expect(producer).toHaveBeenCalledWith({ ...cfgs, ...producerCfgs });
+  producer.publish({
+    publishCfgs: {
+      topic,
+      key: testKey,
+      message: testMessage
+    },
+    middleware: [middlewareProducer]
   });
 });
 
-describe('circe().createConsumer', () => {
-  test('Should reject if consumer from plugin rejects', async () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
+test('Should produce and consume a string message', async (done) => {
+  expect.assertions(1);
 
-    const store = circe(cfgs);
-    expect(store.createConsumer()).rejects.toBeDefined();
+  const topic = 'SIMPLE_TEST_TOPIC_STRING';
+  const testKey = 'test_key';
+  const connection = 'kafka:9092';
+  const groupId = 'integration-string-consumer-test';
+  const testMessage = 'test';
+
+  const consumer = await circe.createConsumer({
+    connection,
+    groupId
   });
 
-  test('Should create a consumer from plugin w/o consumerCfgs', async () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
-
-    const store = circe(cfgs);
-
-    const consumerCfgs = {
-      validators: {}
-    };
-
-    await store.createConsumer(consumerCfgs);
-
-    expect(consumer).toHaveBeenCalledWith({ ...cfgs, ...consumerCfgs });
+  runningClients.push(consumer);
+  const producer = await circe.createProducer({
+    connection
   });
 
-  test('Should create a consumer from plugin', async () => {
-    const cfgs = {
-      plugin() {},
-      connection: 'test'
-    };
+  runningClients.push(producer);
 
-    const store = circe(cfgs);
-    const consumerCfgs = {
-      validators: {},
-      pluginCfgs: {
-        test: 'test'
-      }
-    };
+  const handler = (data) => {
+    expect(data).toMatchObject({
+      topic,
+      key: testKey,
+      message: testMessage
+    });
 
-    await store.createConsumer(consumerCfgs);
+    done();
+  };
 
-    expect(consumer).toHaveBeenCalledWith({ ...cfgs, ...consumerCfgs });
+  consumer.subscribe({ topic });
+  consumer.consume({ handler });
+
+  producer.publish({
+    publishCfgs: {
+      topic,
+      key: testKey,
+      message: testMessage
+    }
   });
 });

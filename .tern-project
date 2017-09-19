@@ -4,7 +4,6 @@
   ],
   "plugins": {
     "node": {},
-    "webpack": {}, 
     "modules": {},
     "es_modules": {},
     "complete_strings": {},

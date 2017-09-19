@@ -7,13 +7,18 @@ import checkParamsMiddleware from './middleware/checkParamsMiddleware';
 import kafkaMessageToBufferMiddleware from './middleware/kafkaMessageToBufferMiddleware';
 import timestampMiddleware from './middleware/timestampMiddleware';
 
+type ProducerParameters = {
+  connection: string,
+  globalCfgs?: Object
+};
+
 const publishMiddlewares = [
   checkParamsMiddleware,
   kafkaMessageToBufferMiddleware,
   timestampMiddleware
 ];
 
-export default async function createProducer({ connection, globalCfgs = {} }) {
+export default async function createProducer({ connection, globalCfgs = {} }: ProducerParameters) {
   if (!connection) {
     throw new Error('connection is required');
   }
@@ -33,7 +38,7 @@ export default async function createProducer({ connection, globalCfgs = {} }) {
   const producerMiddleware = circeMiddleware(publishMiddlewares);
 
   return {
-    publish({ publishCfgs, middleware = [] }) {
+    publish({ publishCfgs, middleware = [] }): void {
       middleware.forEach(ware => producerMiddleware.use(ware));
 
       producerMiddleware.run(publishCfgs, (finalPublishCfgs) => {
@@ -44,12 +49,12 @@ export default async function createProducer({ connection, globalCfgs = {} }) {
         producer.produce(topic, partition, message, key, timestamp, opaqueToken);
       });
     },
-    disconnect() {
+    disconnect(): Promise<*> {
       producer.disconnect();
 
       return pEvent(producer, 'disconnected');
     },
-    addListener(...args) {
+    addListener(...args): void {
       producer.on(...args);
     }
   };

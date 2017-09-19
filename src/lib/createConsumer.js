@@ -5,16 +5,22 @@ import pEvent from 'p-event';
 import circeMiddleware from '@parkhub/circe-middleware';
 import parseBuffersMiddleware from './middleware/parseBuffersMiddleware';
 
+type ConsumerParameters = {
+  connection: string,
+  groupId: string,
+  topicCfgs?: Object,
+  globalCfgs?: Object
+};
+
 function arrayify(value) {
   return Array.isArray(value) ? value : [value];
 }
 
-export default async function createConsumer({
-  connection,
-  groupId,
-  topicCfgs = {},
-  globalConfigs = {}
-}) {
+export default async function createConsumer(consumerParams: ConsumerParameters) {
+  const {
+    connection, groupId, topicCfgs = {}, globalCfgs = {}
+  } = consumerParams;
+
   if (!connection || !groupId) {
     const missingProp = !connection ? 'connection' : 'groupId';
 
@@ -27,7 +33,7 @@ export default async function createConsumer({
     event_cb: true
   };
 
-  const consumer = new kafka.KafkaConsumer({ ...baseCfgs, ...globalConfigs }, topicCfgs);
+  const consumer = new kafka.KafkaConsumer({ ...baseCfgs, ...globalCfgs }, topicCfgs);
 
   consumer.connect();
 
@@ -41,7 +47,7 @@ export default async function createConsumer({
 
       consumer.subscribe(arrayify(topic));
     },
-    consume({ handler, middleware = [] }) {
+    consume({ handler, middleware = [] }): void {
       if (!handler) {
         throw new Error('handler is required');
       }
@@ -52,15 +58,15 @@ export default async function createConsumer({
       middleware.forEach(ware => consumerMiddleware.use(ware));
       consumer.on('data', data => consumerMiddleware.run(data, handler));
     },
-    disconnect() {
+    disconnect(): Promise<*> {
       consumer.disconnect();
 
       return pEvent(consumer, 'disconnected');
     },
-    unsubscribe() {
+    unsubscribe(): void {
       consumer.unsubscribe();
     },
-    addListener(...args) {
+    addListener(...args): void {
       consumer.on(...args);
     }
   };

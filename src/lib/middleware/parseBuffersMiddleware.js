@@ -1,6 +1,8 @@
+/* @flow */
+
 import isJSON from 'is-json';
 
-export default function parseBuffersMiddleware(messageData, next) {
+export default function parseBuffersMiddleware(messageData: Object, next: Object => void): void {
   // Messages from Kafka are shallow objects so this "clone" is ok
   const messageLightCopy = Object.assign({}, messageData);
   const { value, key, ...restOfProperties } = messageLightCopy;
@@ -15,5 +17,5 @@ export default function parseBuffersMiddleware(messageData, next) {
     restOfProperties.key = key.toString();
   }
 
-  next(restOfProperties);
+  return next(restOfProperties);
 }

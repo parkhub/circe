@@ -1,4 +1,6 @@
-export default function checkParamsMiddleware(params, next) {
+/* @flow */
+
+export default function checkParamsMiddleware(params: Object, next: Object => void): void {
   const publishParams = Object.assign({}, params);
   const { topic, message } = publishParams;
 

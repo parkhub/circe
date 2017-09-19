@@ -1,4 +1,6 @@
-export default function kafkaMessageToBufferMiddleware(params, next) {
+/* @flow */
+
+export default function kafkaMessageToBufferMiddleware(params: Object, next: Object => void): void {
   const publishParams = Object.assign({}, params);
   let { message } = publishParams;
 

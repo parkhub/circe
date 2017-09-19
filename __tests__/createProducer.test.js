@@ -9,11 +9,11 @@ const baseProducer = () =>
     connection: 'kafka:9092'
   });
 
-test('Should throw if no paramater object exists', async () => {
+test('Should throw if no argument object exists', async () => {
   expect(createProducer()).rejects.toBeDefined();
 });
 
-test('Should throw if connection is not a parameters', async () => {
+test('Should throw if connection is not an argument', async () => {
   expect(createProducer({})).rejects.toBeDefined();
 });
 
@@ -36,7 +36,7 @@ test(
   10000
 );
 
-test('Should throw if no params exist', async () => {
+test('Should throw if no arguments exist', async () => {
   const producer = await baseProducer();
 
   expect(() => producer.publish()).toThrow();

@@ -69,7 +69,7 @@ describe('.publish', () => {
     const middlewareInstance = circeMiddleware.__mock__;
     const runCall = middlewareInstance.run.mock.calls[0];
 
-    expect(middlewareInstance.use).toHaveBeenCalledTimes(0);
+    expect(middlewareInstance.use).toHaveBeenCalledTimes(2);
     // Check the configs
     expect(runCall[0]).toEqual(publishCfgs);
 
@@ -84,6 +84,7 @@ describe('.publish', () => {
     expect(produceCall[4]).toBe(timestamp);
     expect(produceCall[5]).toBe(opaqueToken);
   });
+
   test('Should publish an event', async () => {
     const producer = await baseProducer();
 
@@ -110,7 +111,7 @@ describe('.publish', () => {
     const middlewareInstance = circeMiddleware.__mock__;
     const runCall = middlewareInstance.run.mock.calls[0];
 
-    expect(middlewareInstance.use).toHaveBeenCalledTimes(1);
+    expect(middlewareInstance.use).toHaveBeenCalledTimes(3);
     // Check the configs
     expect(runCall[0]).toEqual(publishCfgs);
 

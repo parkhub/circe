@@ -12,12 +12,6 @@ type ProducerParameters = {
   globalCfgs?: Object
 };
 
-const publishMiddlewares = [
-  checkParamsMiddleware,
-  kafkaMessageToBufferMiddleware,
-  timestampMiddleware
-];
-
 export default async function createProducer({ connection, globalCfgs = {} }: ProducerParameters) {
   if (!connection) {
     throw new Error('connection is required');
@@ -35,11 +29,13 @@ export default async function createProducer({ connection, globalCfgs = {} }: Pr
 
   await pEvent(producer, 'ready');
 
-  const producerMiddleware = circeMiddleware(publishMiddlewares);
+  const producerMiddleware = circeMiddleware([checkParamsMiddleware]);
 
   return {
     publish({ publishCfgs, middleware = [] }): void {
       middleware.forEach(ware => producerMiddleware.use(ware));
+      producerMiddleware.use(kafkaMessageToBufferMiddleware);
+      producerMiddleware.use(timestampMiddleware);
 
       producerMiddleware.run(publishCfgs, (finalPublishCfgs) => {
         const {

@@ -30,7 +30,7 @@ steps:
     composition_candidates:
       integration_tests:
         image: ${{BuildDockerImage}}
-        command: nps start test.integration
+        command: npm start test.integration
     on_success:
       metadata:
         set:

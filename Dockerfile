@@ -15,10 +15,14 @@ RUN apk --update --upgrade add \
   libressl2.5-libcrypto \
   libc6-compat \
   libressl2.5-libssl \
-  librdkafka-dev=0.9.5-r0
+  librdkafka-dev=0.9.5-r0 \ 
+  git \
+  ca-certificates \
+  wget \
+  && wget -O /etc/apk/keys/sgerrand.rsa.pub https://raw.githubusercontent.com/sgerrand/alpine-pkg-glibc/master/sgerrand.rsa.pub \
+  && wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.25-r0/glibc-2.25-r0.apk \
+  && apk add glibc-2.25-r0.apk
 
-# RUN apk add --update --upgrade --no-cache tini 
-# RUN apk add --update --upgrade --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/community/ --allow-untrusted librdkafka-dev
 ENV WITH_SASL 0
 ENV BUILD_LIBRDKAFKA 0
 

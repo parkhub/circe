@@ -13,7 +13,6 @@ RUN apk --update --upgrade add \
   bash \
   python \
   libressl2.5-libcrypto \
-  libc6-compat \
   libressl2.5-libssl \
   librdkafka-dev=0.9.5-r0 \ 
   git \

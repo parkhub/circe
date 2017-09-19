@@ -6,7 +6,7 @@ steps:
     image_name: circe
     dockerfile: Dockerfile
   RunUnitTests:
-    title: Running Unit tests
+    title: Running Unit Tests
     image: ${{BuildDockerImage}}
     working_directory: /npm-module
     commands:
@@ -24,10 +24,10 @@ steps:
               - CF_QUALITY: false
   RunIntegrationTests:
     type: composition
-    title: Running Unit tests
-    description: Doing integration tests
+    title: Running Integration Tests
+    description: Running integration tests with kafka
     working_directory: /npm-module
-    composition: ./docker-compose.yml
+    composition: /npm-module/docker-compose.yml
     composition_candidates:
       integration_tests:
         image: ${{BuildDockerImage}}

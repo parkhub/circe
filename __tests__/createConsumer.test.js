@@ -39,7 +39,9 @@ test('Should subscribe to an array of topics', async (done) => {
     called.push(data.topic);
 
     if (called.length === 2) {
-      expect(called).toEqual(topics);
+      expect(called).toContain('ARRAY_TOPIC');
+      expect(called).toContain('ARRAY_TOPIC_TWO');
+      expect(called).toHaveLength(2);
       expect(handler).toHaveBeenCalledTimes(2);
       done();
     }

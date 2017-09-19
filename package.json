@@ -62,6 +62,7 @@
   },
   "jest": {
     "verbose": true,
+    "testEnvironment": "node",
     "collectCoverage": true,
     "coverageThreshold": {
       "global": {
@@ -84,10 +85,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/parkhub/eslint-config-parkhub-base.git"
+    "url": "https://github.com/parkhub/circe.git"
   },
   "bugs": {
-    "url": "https://github.com/parkhub/eslint-config-parkhub-base/issues"
+    "url": "https://github.com/parkhub/circe/issues"
   },
   "publishConfig": {
     "access": "public"

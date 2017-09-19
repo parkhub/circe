@@ -1,6 +1,7 @@
 {
   "verbose": true,
   "collectCoverage": true,
+  "testEnvironment": "node",
   "coverageThreshold": {
     "global": {
       "branches": 100,

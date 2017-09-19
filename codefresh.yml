@@ -1,13 +1,13 @@
 version: '1.0'
 steps:
-  BuildingDockerImage:
+  BuildDockerImage:
     title: Building Docker Image
     type: build
     image_name: circe
     dockerfile: Dockerfile
-  RunningTests:
-    title: Running tests
-    image: ${{BuildingDockerImage}}
+  RunUnitTests:
+    title: Running Unit tests
+    image: ${{BuildDockerImage}}
     working_directory: /npm-module
     commands:
       - npm start validate
@@ -15,16 +15,36 @@ steps:
     on_success:
       metadata:
         set:
-          - '${{BuildingDockerImage.imageId}}':
+          - '${{BuildDockerImage.imageId}}':
               - CF_QUALITY: true
     on_fail:
       metadata:
         set:
-          - '${{BuildingDockerImage.imageId}}':
+          - '${{BuildDockerImage.imageId}}':
               - CF_QUALITY: false
-  PublishingModule:
+  RunIntegrationTests:
+    type: composition
+    title: Running Unit tests
+    description: Doing integration tests
+    working_directory: /npm-module
+    composition: ./docker-compose.yml
+    composition_candidates:
+      integration_tests:
+        image: ${{BuildDockerImage}}
+        command: nps start test.integration
+    on_success:
+      metadata:
+        set:
+          - '${{BuildDockerImage.imageId}}':
+              - CF_QUALITY: true
+    on_fail:
+      metadata:
+        set:
+          - '${{BuildDockerImage.imageId}}':
+              - CF_QUALITY: false
+  PublishModule:
     title: Publishing my module
-    image: ${{BuildingDockerImage}}
+    image: ${{BuildDockerImage}}
     working_directory: /npm-module 
     when:
       branch:
@@ -32,3 +52,4 @@ steps:
     commands:
       - npm start build
       - npm start release
+

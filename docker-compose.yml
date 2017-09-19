@@ -4,9 +4,9 @@ services:
     image: quay.io/parkhubprime/pk-ubuntu-zookeeper:0.1.0
     hostname: zookeeper-0
     ports:
-      - 2181:2181
-      - 2888:2888
-      - 3888:3888
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
     environment:
       ZK_REPLICAS: 1
       ZK_CLIENT_PORT: 2181
@@ -18,8 +18,8 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - 9092:9092
-      - 9999:9999
+      - "9092:9092"
+      - "9999:9999"
     env_file:
       - kafka.env
     volumes:

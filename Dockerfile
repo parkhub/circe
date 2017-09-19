@@ -1,4 +1,4 @@
-FROM node:8.4-alpine 
+FROM node:8.5-alpine 
 LABEL maintainer Daniel Olivares "daniel.olivares@parkhub.com"
 
 RUN apk add --update --upgrade --no-cache git

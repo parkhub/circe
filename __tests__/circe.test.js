@@ -1,5 +1,6 @@
 import circe from '../src';
 
+jest.setTimeout(60000);
 jest.unmock('node-rdkafka');
 jest.unmock('@parkhub/circe-middleware');
 

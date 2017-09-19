@@ -1,6 +1,7 @@
 import createConsumer from '../src/lib/createConsumer';
 import createProducer from './fixtures/createProducer';
 
+jest.setTimeout(60000);
 jest.unmock('node-rdkafka');
 jest.unmock('@parkhub/circe-middleware');
 
@@ -24,84 +25,72 @@ test('Should disconnect a consumer', async () => {
   expect(() => consumer.subscribe({ topic: 'test', handler: jest.fn() })).toThrow();
 });
 
-test(
-  'Should subscribe to an array of topics',
-  async (done) => {
-    expect.assertions(2);
-    const consumer = await baseConsumer();
-    const producer = await createProducer();
+test('Should subscribe to an array of topics', async (done) => {
+  expect.assertions(2);
+  const consumer = await baseConsumer();
+  const producer = await createProducer();
 
-    runningClients.push(consumer);
-    runningClients.push(producer);
+  runningClients.push(consumer);
+  runningClients.push(producer);
 
-    const topics = ['ARRAY_TOPIC', 'ARRAY_TOPIC_TWO'];
-    const called = [];
-    const handler = jest.fn((data) => {
-      called.push(data.topic);
+  const topics = ['ARRAY_TOPIC', 'ARRAY_TOPIC_TWO'];
+  const called = [];
+  const handler = jest.fn((data) => {
+    called.push(data.topic);
 
-      if (called.length === 2) {
-        expect(called).toEqual(topics);
-        expect(handler).toHaveBeenCalledTimes(2);
-        done();
-      }
-    });
-
-    consumer.subscribe({ topic: topics });
-    consumer.consume({ handler });
-
-    producer.produce('ARRAY_TOPIC', null, Buffer.from('test'));
-    producer.produce('ARRAY_TOPIC_TWO', null, Buffer.from('test'));
-  },
-  10000
-);
-
-test(
-  'Should unsubscribe a consumer',
-  async (done) => {
-    expect.assertions(1);
-
-    const consumer = await baseConsumer();
-    const producer = await createProducer();
-
-    runningClients.push(consumer);
-    runningClients.push(producer);
-
-    const topic = 'TEST_TOPIC_UNSUBSCRIBE';
-    const otherTopic = 'OTHER_TOPIC';
-    const testTopicHandler = jest.fn((data) => {
-      expect(data.topic).toBe(otherTopic);
+    if (called.length === 2) {
+      expect(called).toEqual(topics);
+      expect(handler).toHaveBeenCalledTimes(2);
       done();
-    });
+    }
+  });
 
-    consumer.subscribe({ topic });
-    consumer.consume({ handler: testTopicHandler });
+  consumer.subscribe({ topic: topics });
+  consumer.consume({ handler });
 
-    consumer.unsubscribe();
-    consumer.subscribe({ topic: otherTopic });
+  producer.produce('ARRAY_TOPIC', null, Buffer.from('test'));
+  producer.produce('ARRAY_TOPIC_TWO', null, Buffer.from('test'));
+});
 
-    producer.produce(otherTopic, null, Buffer.from('test'));
-  },
-  100000
-);
+test('Should unsubscribe a consumer', async (done) => {
+  expect.assertions(1);
 
-test(
-  'Should add a new listener to consumer',
-  async (done) => {
-    expect.assertions(1);
-    const consumer = await baseConsumer();
+  const consumer = await baseConsumer();
+  const producer = await createProducer();
 
-    const disconnectedListener = jest.fn(() => {
-      expect(disconnectedListener).toHaveBeenCalledTimes(1);
+  runningClients.push(consumer);
+  runningClients.push(producer);
 
-      done();
-    });
+  const topic = 'TEST_TOPIC_UNSUBSCRIBE';
+  const otherTopic = 'OTHER_TOPIC_TO_NOT_UNSUBSCRIBE';
+  const testTopicHandler = jest.fn((data) => {
+    expect(data.topic).toBe(otherTopic);
+    done();
+  });
 
-    consumer.addListener('disconnected', disconnectedListener);
+  consumer.subscribe({ topic });
+  consumer.consume({ handler: testTopicHandler });
 
-    consumer.disconnect();
-  },
-  10000
-);
+  consumer.unsubscribe();
+  consumer.subscribe({ topic: otherTopic });
+
+  producer.produce(otherTopic, null, Buffer.from('test'));
+});
+
+test('Should add a new listener to consumer', async (done) => {
+  expect.assertions(1);
+  const consumer = await baseConsumer();
+
+  const disconnectedListener = jest.fn(() => {
+    expect(disconnectedListener).toHaveBeenCalledTimes(1);
+
+    done();
+  });
+
+  consumer.addListener('disconnected', disconnectedListener);
+
+  consumer.disconnect();
+});
 
 test('Should fail when subscribe is called without a topic', async () => {
   const consumer = await baseConsumer();

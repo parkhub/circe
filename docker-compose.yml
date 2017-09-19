@@ -1,5 +1,12 @@
 version: '3'
 services: 
+  circe-integration-test:
+    build: .
+    command: ["npm", "start", "test.integration"]
+    volumes:
+      - ./:/npm-module
+    links:
+      - kafka
   zookeeper:
     image: quay.io/parkhubprime/pk-ubuntu-zookeeper:0.1.0
     hostname: zookeeper-0

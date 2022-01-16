@@ -96,7 +96,7 @@
   "dependencies": {
     "@parkhub/circe-middleware": "^1.1.0",
     "is-json": "^2.0.1",
-    "node-rdkafka": "^2.0.0",
+    "node-rdkafka": "^2.12.0",
     "p-event": "^1.3.0"
   }
 }
